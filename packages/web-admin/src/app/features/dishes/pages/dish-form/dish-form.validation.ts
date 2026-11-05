@@ -21,13 +21,13 @@ export type NewIngredientErrors = Partial<Record<'ingredient' | 'quantity', stri
 export function validateNewIngredient(
   ingredientId: string,
   quantity: number,
-  existing: DishIngredient[]
+  existing: DishIngredient[],
 ): NewIngredientErrors {
   const errors: NewIngredientErrors = {}
 
   if (!ingredientId) {
     errors.ingredient = 'Selecciona un ingrediente'
-  } else if (existing.some(i => i.ingredientId === ingredientId)) {
+  } else if (existing.some((i) => i.ingredientId === ingredientId)) {
     errors.ingredient = 'Este ingrediente ya está en el plato'
   }
 

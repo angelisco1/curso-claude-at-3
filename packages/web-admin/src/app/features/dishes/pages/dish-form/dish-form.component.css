@@ -181,6 +181,7 @@ select.form-control {
   color: var(--text-secondary);
 }
 
-.btn, .chip-remove {
+.btn,
+.chip-remove {
   cursor: pointer;
 }

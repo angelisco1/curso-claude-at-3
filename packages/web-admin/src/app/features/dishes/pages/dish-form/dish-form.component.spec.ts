@@ -10,7 +10,7 @@ import type { Ingredient } from '../../../ingredients/models/ingredient.model'
 
 export const INGREDIENTS: Ingredient[] = [
   { id: 'ing-1', name: 'Tomate', unit: 'kg', currentStock: 10, restaurantId: 'rest-1', createdAt: '', updatedAt: '' },
-  { id: 'ing-2', name: 'Queso', unit: 'kg', currentStock: 5, restaurantId: 'rest-1', createdAt: '', updatedAt: '' }
+  { id: 'ing-2', name: 'Queso', unit: 'kg', currentStock: 5, restaurantId: 'rest-1', createdAt: '', updatedAt: '' },
 ] as Ingredient[]
 
 async function setup() {
@@ -23,12 +23,18 @@ async function setup() {
     providers: [
       provideZonelessChangeDetection(),
       provideRouter([]),
-      { provide: ActivatedRoute, useValue: { parent: { snapshot: { params: { restaurantId: 'rest-1' } } }, snapshot: { paramMap: { get: () => null } } } },
+      {
+        provide: ActivatedRoute,
+        useValue: {
+          parent: { snapshot: { params: { restaurantId: 'rest-1' } } },
+          snapshot: { paramMap: { get: () => null } },
+        },
+      },
       { provide: DishStore, useValue: dishStore },
       { provide: DishService, useValue: dishService },
       { provide: IngredientStore, useValue: ingredientStore },
-      importProvidersFrom(LucideAngularModule.pick({ ChevronLeft, Plus, Trash2, CircleAlert }))
-    ]
+      importProvidersFrom(LucideAngularModule.pick({ ChevronLeft, Plus, Trash2, CircleAlert })),
+    ],
   })
 
   const fixture: ComponentFixture<DishFormComponent> = TestBed.createComponent(DishFormComponent)
@@ -56,7 +62,7 @@ describe('DishFormComponent', () => {
       ['dish-available', 'Disponible'],
       ['dish-description', 'Descripción (opcional)'],
       ['new-ingredient', 'Ingrediente'],
-      ['new-ingredient-qty', 'Cantidad']
+      ['new-ingredient-qty', 'Cantidad'],
     ])('el control #%s está asociado a su label "%s"', async (id, text) => {
       const { el } = await setup()
 
@@ -97,7 +103,7 @@ describe('DishFormComponent', () => {
     it('"Cancelar" es un enlace a la lista de platos', async () => {
       const { el } = await setup()
 
-      const cancel = Array.from(el.querySelectorAll('a')).find(a => a.textContent?.trim() === 'Cancelar')
+      const cancel = Array.from(el.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Cancelar')
       expect(cancel).toBeDefined()
       expect(cancel!.getAttribute('href')).toBe('/restaurants/rest-1/dishes')
     })
@@ -114,7 +120,7 @@ describe('DishFormComponent', () => {
 
       const icons = Array.from(el.querySelectorAll('lucide-icon'))
       expect(icons.length).toBeGreaterThan(0)
-      icons.forEach(icon => expect(icon.getAttribute('aria-hidden')).toBe('true'))
+      icons.forEach((icon) => expect(icon.getAttribute('aria-hidden')).toBe('true'))
     })
 
     it('al enviar el <form> se llama a onSubmit', async () => {
@@ -366,7 +372,7 @@ describe('DishFormComponent', () => {
   describe('foco y anuncio al quitar ingrediente', () => {
     const TWO = [
       { ingredientId: 'ing-1', quantity: 2 },
-      { ingredientId: 'ing-2', quantity: 1 }
+      { ingredientId: 'ing-2', quantity: 1 },
     ]
 
     it('quitar el primero mueve el foco al botón Quitar del siguiente y lo anuncia', async () => {

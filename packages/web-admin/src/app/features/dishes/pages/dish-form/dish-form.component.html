@@ -13,7 +13,9 @@
       <p>{{ errorSummary() }}</p>
       <ul>
         @for (e of errorList(); track e.id) {
-          <li><a [attr.href]="'#' + e.id" (click)="focusField(e.id, $event)">{{ e.message }}</a></li>
+          <li>
+            <a [attr.href]="'#' + e.id" (click)="focusField(e.id, $event)">{{ e.message }}</a>
+          </li>
         }
       </ul>
     </div>
@@ -27,10 +29,19 @@
     <div class="form-grid">
       <div class="form-group">
         <label for="dish-name">Nombre del plato <span class="required-mark">(obligatorio)</span></label>
-        <input id="dish-name" type="text" class="form-control" [(ngModel)]="form.name" name="name"
-          placeholder="Ensalada César" autocomplete="off" required aria-required="true"
+        <input
+          id="dish-name"
+          type="text"
+          class="form-control"
+          [(ngModel)]="form.name"
+          name="name"
+          placeholder="Ensalada César"
+          autocomplete="off"
+          required
+          aria-required="true"
           [attr.aria-invalid]="errors().name ? 'true' : null"
-          [attr.aria-describedby]="errors().name ? 'dish-name-error' : null" />
+          [attr.aria-describedby]="errors().name ? 'dish-name-error' : null"
+        />
         @if (errors().name) {
           <p class="field-error" id="dish-name-error">
             <lucide-icon name="circle-alert" [size]="14" aria-hidden="true"></lucide-icon>
@@ -41,10 +52,20 @@
 
       <div class="form-group">
         <label for="dish-price">Precio (€) <span class="required-mark">(obligatorio)</span></label>
-        <input id="dish-price" type="number" class="form-control" [(ngModel)]="form.price" name="price"
-          step="0.01" min="0" inputmode="decimal" required aria-required="true"
+        <input
+          id="dish-price"
+          type="number"
+          class="form-control"
+          [(ngModel)]="form.price"
+          name="price"
+          step="0.01"
+          min="0"
+          inputmode="decimal"
+          required
+          aria-required="true"
           [attr.aria-invalid]="errors().price ? 'true' : null"
-          [attr.aria-describedby]="errors().price ? 'dish-price-error' : null" />
+          [attr.aria-describedby]="errors().price ? 'dish-price-error' : null"
+        />
         @if (errors().price) {
           <p class="field-error" id="dish-price-error">
             <lucide-icon name="circle-alert" [size]="14" aria-hidden="true"></lucide-icon>
@@ -72,7 +93,14 @@
 
       <div class="form-group form-full">
         <label for="dish-description">Descripción (opcional)</label>
-        <textarea id="dish-description" class="form-control" [(ngModel)]="form.description" name="description" rows="3" placeholder="Una deliciosa ensalada con..."></textarea>
+        <textarea
+          id="dish-description"
+          class="form-control"
+          [(ngModel)]="form.description"
+          name="description"
+          rows="3"
+          placeholder="Una deliciosa ensalada con..."
+        ></textarea>
       </div>
     </div>
 
@@ -84,8 +112,12 @@
           @for (ing of form.ingredients; track ing.ingredientId) {
             <li class="ingredient-chip">
               <span>{{ getIngredientName(ing.ingredientId) }} — {{ ing.quantity }}</span>
-              <button type="button" class="chip-remove" [attr.aria-label]="'Quitar ' + getIngredientName(ing.ingredientId)"
-                (click)="removeIngredient(ing.ingredientId)">
+              <button
+                type="button"
+                class="chip-remove"
+                [attr.aria-label]="'Quitar ' + getIngredientName(ing.ingredientId)"
+                (click)="removeIngredient(ing.ingredientId)"
+              >
                 <lucide-icon name="trash-2" [size]="12" aria-hidden="true"></lucide-icon>
               </button>
             </li>
@@ -96,19 +128,36 @@
       <fieldset class="add-ingredient-row">
         <legend class="visually-hidden">Añadir ingrediente</legend>
         <label for="new-ingredient" class="visually-hidden">Ingrediente</label>
-        <select id="new-ingredient" class="form-control" [(ngModel)]="newIngredientId" name="newIngredientId"
+        <select
+          id="new-ingredient"
+          class="form-control"
+          [(ngModel)]="newIngredientId"
+          name="newIngredientId"
           [attr.aria-invalid]="ingredientErrors().ingredient ? 'true' : null"
-          [attr.aria-describedby]="ingredientErrors().ingredient ? 'new-ingredient-error' : null">
+          [attr.aria-describedby]="ingredientErrors().ingredient ? 'new-ingredient-error' : null"
+        >
           <option value="">Seleccionar ingrediente</option>
           @for (i of ingredientStore.ingredients(); track i.id) {
             <option [value]="i.id">{{ i.name }} ({{ i.unit }})</option>
           }
         </select>
         <label for="new-ingredient-qty" class="visually-hidden">Cantidad</label>
-        <input id="new-ingredient-qty" type="number" class="form-control qty-input" [(ngModel)]="newIngredientQty" name="newIngredientQty" placeholder="Cant."
+        <input
+          id="new-ingredient-qty"
+          type="number"
+          class="form-control qty-input"
+          [(ngModel)]="newIngredientQty"
+          name="newIngredientQty"
+          placeholder="Cant."
           [attr.aria-invalid]="ingredientErrors().quantity ? 'true' : null"
-          [attr.aria-describedby]="ingredientErrors().quantity ? 'new-ingredient-qty-error' : null" />
-        <button type="button" class="btn btn-secondary btn-sm" aria-label="Añadir ingrediente" (click)="addIngredient()">
+          [attr.aria-describedby]="ingredientErrors().quantity ? 'new-ingredient-qty-error' : null"
+        />
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm"
+          aria-label="Añadir ingrediente"
+          (click)="addIngredient()"
+        >
           <lucide-icon name="plus" [size]="14" aria-hidden="true"></lucide-icon>
         </button>
       </fieldset>

@@ -6,7 +6,7 @@ test.use({ video: 'on', launchOptions: { slowMo: 250 }, viewport: { width: 1280,
 /** Pulsa Tab hasta que el foco llega al elemento indicado (solo teclado). */
 async function tabUntil(page: Page, selector: string, maxTabs = 60) {
   for (let i = 0; i < maxTabs; i++) {
-    const reached = await page.evaluate(sel => document.activeElement?.matches(sel) ?? false, selector)
+    const reached = await page.evaluate((sel) => document.activeElement?.matches(sel) ?? false, selector)
     if (reached) return
     await page.keyboard.press('Tab')
   }
@@ -95,7 +95,10 @@ test('recorrido con teclado del formulario de nuevo plato', async ({ page, reque
   await expect(focused(page)).toHaveAttribute('aria-invalid', 'true')
 
   // Añadir dos ingredientes con cantidad, usando Enter sobre el botón
-  for (const [ingredient, quantity] of [[first, '2'], [second, '3']] as const) {
+  for (const [ingredient, quantity] of [
+    [first, '2'],
+    [second, '3'],
+  ] as const) {
     await page.keyboard.type(ingredient.name)
     await expect(page.locator('#new-ingredient option:checked')).toContainText(ingredient.name)
     await page.keyboard.press('Tab')

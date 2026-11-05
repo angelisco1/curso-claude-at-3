@@ -6,7 +6,7 @@ const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
 // El contenedor tiene una animación fade-in: auditar a mitad de animación da contrastes falsos
 const waitForAnimations = (page: Page) =>
-  page.waitForFunction(() => document.getAnimations().every(a => a.playState === 'finished'))
+  page.waitForFunction(() => document.getAnimations().every((a) => a.playState === 'finished'))
 
 test.describe('accesibilidad del formulario de platos (axe)', () => {
   test('formulario vacío sin violaciones WCAG 2.2 A/AA', async ({ page }) => {

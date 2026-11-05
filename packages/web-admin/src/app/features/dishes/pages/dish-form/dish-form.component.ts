@@ -7,14 +7,19 @@ import { DishStore } from '../../store/dish.store'
 import { DishService } from '../../services/dish.service'
 import { IngredientStore } from '../../../ingredients/store/ingredient.store'
 import type { CreateDishDto, DishCategory } from '../../models/dish.model'
-import { validateDishForm, validateNewIngredient, type DishFormErrors, type NewIngredientErrors } from './dish-form.validation'
+import {
+  validateDishForm,
+  validateNewIngredient,
+  type DishFormErrors,
+  type NewIngredientErrors,
+} from './dish-form.validation'
 
 @Component({
   selector: 'app-dish-form',
   standalone: true,
   imports: [FormsModule, RouterLink, LucideAngularModule],
   templateUrl: './dish-form.component.html',
-  styleUrl: './dish-form.component.css'
+  styleUrl: './dish-form.component.css',
 })
 export class DishFormComponent implements OnInit {
   private readonly store = inject(DishStore)
@@ -39,7 +44,7 @@ export class DishFormComponent implements OnInit {
     const errors = this.errors()
     const fields = [
       { id: 'dish-name', message: errors.name },
-      { id: 'dish-price', message: errors.price }
+      { id: 'dish-price', message: errors.price },
     ]
     return fields.filter((f): f is { id: string; message: string } => !!f.message)
   })
@@ -57,7 +62,7 @@ export class DishFormComponent implements OnInit {
     price: 0,
     category: 'principal',
     available: true,
-    ingredients: []
+    ingredients: [],
   }
 
   newIngredientId = ''
@@ -73,10 +78,10 @@ export class DishFormComponent implements OnInit {
 
   getCategoryLabel(category: string): string {
     const labels: Record<string, string> = {
-      'entrante': 'Entrante',
-      'principal': 'Principal',
-      'postre': 'Postre',
-      'bebida': 'Bebida'
+      entrante: 'Entrante',
+      principal: 'Principal',
+      postre: 'Postre',
+      bebida: 'Bebida',
     }
     return labels[category] ?? category
   }
@@ -106,7 +111,7 @@ export class DishFormComponent implements OnInit {
         price: dish.price,
         category: dish.category,
         available: dish.available,
-        ingredients: [...dish.ingredients]
+        ingredients: [...dish.ingredients],
       }
     } catch {
       this.error.set('No se pudo cargar el plato.')
@@ -126,7 +131,7 @@ export class DishFormComponent implements OnInit {
 
     this.form.ingredients = [
       ...this.form.ingredients,
-      { ingredientId: this.newIngredientId, quantity: this.newIngredientQty }
+      { ingredientId: this.newIngredientId, quantity: this.newIngredientQty },
     ]
     this.liveMessage.set(`${this.getIngredientName(this.newIngredientId)} añadido`)
     this.newIngredientId = ''
@@ -135,11 +140,11 @@ export class DishFormComponent implements OnInit {
   }
 
   removeIngredient(ingredientId: string): void {
-    const index = this.form.ingredients.findIndex(i => i.ingredientId === ingredientId)
+    const index = this.form.ingredients.findIndex((i) => i.ingredientId === ingredientId)
     if (index === -1) return
 
     const name = this.getIngredientName(ingredientId)
-    this.form.ingredients = this.form.ingredients.filter(i => i.ingredientId !== ingredientId)
+    this.form.ingredients = this.form.ingredients.filter((i) => i.ingredientId !== ingredientId)
     this.liveMessage.set(`${name} eliminado`)
 
     // El botón enfocado desaparece: el foco pasa al siguiente "Quitar" (o al anterior, o al select si no quedan)
@@ -153,12 +158,12 @@ export class DishFormComponent implements OnInit {
         const buttons = this.host.nativeElement.querySelectorAll<HTMLElement>('.chip-remove')
         buttons[Math.min(index, remaining - 1)]?.focus()
       },
-      { injector: this.injector }
+      { injector: this.injector },
     )
   }
 
   getIngredientName(ingredientId: string): string {
-    const ingredient = this.ingredientStore.ingredients().find(i => i.id === ingredientId)
+    const ingredient = this.ingredientStore.ingredients().find((i) => i.id === ingredientId)
     return ingredient ? `${ingredient.name} (${ingredient.unit})` : ingredientId
   }
 

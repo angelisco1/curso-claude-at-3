@@ -8,7 +8,7 @@ const validForm = (overrides: Partial<CreateDishDto> = {}): CreateDishDto => ({
   category: 'principal',
   available: true,
   ingredients: [],
-  ...overrides
+  ...overrides,
 })
 
 describe('validateDishForm', () => {
