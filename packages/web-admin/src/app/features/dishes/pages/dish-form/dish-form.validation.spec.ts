@@ -1,5 +1,5 @@
 import type { CreateDishDto } from '../../models/dish.model'
-import { validateDishForm } from './dish-form.validation'
+import { validateDishForm, validateNewIngredient } from './dish-form.validation'
 
 const validForm = (overrides: Partial<CreateDishDto> = {}): CreateDishDto => ({
   name: 'Pizza',
@@ -38,5 +38,25 @@ describe('validateDishForm', () => {
 
   it('devuelve {} con un formulario válido', () => {
     expect(validateDishForm(validForm())).toEqual({})
+  })
+})
+
+describe('validateNewIngredient', () => {
+  const existing = [{ ingredientId: 'ing-1', quantity: 2 }]
+
+  it('pide seleccionar un ingrediente si el id está vacío', () => {
+    expect(validateNewIngredient('', 1, existing).ingredient).toBe('Selecciona un ingrediente')
+  })
+
+  it.each([0, -1, NaN])('devuelve error de cantidad con %s', (qty) => {
+    expect(validateNewIngredient('ing-2', qty, existing).quantity).toBe('La cantidad debe ser mayor que 0')
+  })
+
+  it('devuelve error si el ingrediente ya está en el plato', () => {
+    expect(validateNewIngredient('ing-1', 1, existing).ingredient).toBe('Este ingrediente ya está en el plato')
+  })
+
+  it('devuelve {} si es válido', () => {
+    expect(validateNewIngredient('ing-2', 1.5, existing)).toEqual({})
   })
 })

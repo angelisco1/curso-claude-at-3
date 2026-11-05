@@ -79,7 +79,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 6. **Validación del precio.**
   - Tests: error `'El precio debe ser mayor que 0'` con `0`, `-1`, `null`/`NaN` (campo vacío en `type="number"`); sin error con `0.5` y `12`. Un formulario válido devuelve `{}`.
   - Código: añadir la regla de precio a `validateDishForm` (coherente con `InvalidPriceError` de la API: precio > 0).
-- [ ] 7. **Validación del nuevo ingrediente.**
+- [x] 7. **Validación del nuevo ingrediente.**
   - Tests: `validateNewIngredient(id, qty, existentes)` devuelve error `ingredient: 'Selecciona un ingrediente'` si `id === ''`; `quantity: 'La cantidad debe ser mayor que 0'` si `qty <= 0` o `NaN`; `ingredient: 'Este ingrediente ya está en el plato'` si ya existe; `{}` si es válido.
   - Código: implementar `validateNewIngredient` y el tipo `NewIngredientErrors`.
 
