@@ -91,7 +91,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 9. **Etiquetas asociadas a los campos.**
   - Tests: existen y están asociados por `for`/`id` los controles con label "Nombre del plato", "Precio (€)", "Categoría", "Disponible", "Descripción (opcional)", "Ingrediente" y "Cantidad" (buscar `label[for=X]` y `#X`); nombre y precio tienen `required` y `aria-required="true"`.
   - Código: sustituir `<div class="fake-label">` por `<label for>` con `id` únicos (`dish-name`, `dish-price`, `dish-category`, `dish-available`, `dish-description`, `new-ingredient`, `new-ingredient-qty`); añadir indicador visual "(obligatorio)"; `step="0.01"`, `min="0"` e `inputmode="decimal"` en precio; `autocomplete="off"` en nombre.
-- [ ] 10. **Formulario real y botones de acción.**
+- [x] 10. **Formulario real y botones de acción.**
   - Tests: existe un `<form>`; el botón "Guardar" es `button[type=submit]`; "Cancelar" es un `<a>` con `href` a `/restaurants/rest-1/dishes`; el enlace "volver" tiene `aria-label="Volver a la lista de platos"`; disparar `submit` en el `<form>` llama a `onSubmit`.
   - Código: envolver campos en `<form (ngSubmit)="onSubmit()" novalidate>`; `Guardar` → `<button type="submit" class="btn btn-primary" [disabled]="loading()">`; `Cancelar` → `<a class="btn btn-secondary" [routerLink]="listUrl">`; `aria-label` en el enlace "volver"; `aria-hidden="true"` en todos los `<lucide-icon>`.
 - [ ] 11. **Botones de ingredientes accesibles.**

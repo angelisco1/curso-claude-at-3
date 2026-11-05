@@ -84,4 +84,46 @@ describe('DishFormComponent', () => {
       expect(el.querySelector('#dish-name')!.getAttribute('autocomplete')).toBe('off')
     })
   })
+
+  describe('formulario y acciones', () => {
+    it('envuelve los campos en un <form> con "Guardar" como botón submit', async () => {
+      const { el } = await setup()
+
+      expect(el.querySelector('form')).not.toBeNull()
+      const save = el.querySelector('form button[type="submit"]')
+      expect(save?.textContent?.trim()).toBe('Guardar')
+    })
+
+    it('"Cancelar" es un enlace a la lista de platos', async () => {
+      const { el } = await setup()
+
+      const cancel = Array.from(el.querySelectorAll('a')).find(a => a.textContent?.trim() === 'Cancelar')
+      expect(cancel).toBeDefined()
+      expect(cancel!.getAttribute('href')).toBe('/restaurants/rest-1/dishes')
+    })
+
+    it('el enlace "volver" tiene nombre accesible', async () => {
+      const { el } = await setup()
+
+      const back = el.querySelector('a.back-link')
+      expect(back?.getAttribute('aria-label')).toBe('Volver a la lista de platos')
+    })
+
+    it('todos los iconos están ocultos para tecnologías de apoyo', async () => {
+      const { el } = await setup()
+
+      const icons = Array.from(el.querySelectorAll('lucide-icon'))
+      expect(icons.length).toBeGreaterThan(0)
+      icons.forEach(icon => expect(icon.getAttribute('aria-hidden')).toBe('true'))
+    })
+
+    it('al enviar el <form> se llama a onSubmit', async () => {
+      const { el, component } = await setup()
+      const spy = vi.spyOn(component, 'onSubmit').mockResolvedValue()
+
+      el.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }))
+
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+  })
 })
