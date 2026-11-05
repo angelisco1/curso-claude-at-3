@@ -136,5 +136,15 @@ test('recorrido con teclado del formulario de nuevo plato', async ({ page, reque
   await page.keyboard.press('Enter')
 
   await expect(page).toHaveURL(/\/restaurants\/rest-1\/dishes$/)
-  await expect(page.getByText(dishName)).toBeVisible()
+  const newDish = page.getByText(dishName)
+  await expect(newDish).toBeVisible()
+
+  // Dejar el plato nuevo a la vista (y unos segundos en el vídeo)
+  await newDish.scrollIntoViewIfNeeded()
+  await page.waitForTimeout(2000)
+
+  // Guardar el vídeo del recorrido (el vídeo se finaliza al cerrar la página)
+  const video = page.video()
+  await page.close()
+  await video?.saveAs('e2e-videos/dish-form-keyboard.webm')
 })
