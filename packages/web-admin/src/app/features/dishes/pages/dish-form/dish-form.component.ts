@@ -33,6 +33,7 @@ export class DishFormComponent implements OnInit {
   errors = signal<DishFormErrors>({})
   submitted = signal(false)
   ingredientErrors = signal<NewIngredientErrors>({})
+  liveMessage = signal('')
 
   readonly errorList = computed(() => {
     const errors = this.errors()
@@ -127,8 +128,10 @@ export class DishFormComponent implements OnInit {
       ...this.form.ingredients,
       { ingredientId: this.newIngredientId, quantity: this.newIngredientQty }
     ]
+    this.liveMessage.set(`${this.getIngredientName(this.newIngredientId)} añadido`)
     this.newIngredientId = ''
     this.newIngredientQty = 1
+    afterNextRender(() => this.focusField('new-ingredient'), { injector: this.injector })
   }
 
   removeIngredient(ingredientId: string): void {

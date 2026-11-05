@@ -345,4 +345,21 @@ describe('DishFormComponent', () => {
       expect(el.querySelector('#new-ingredient-error')).toBeNull()
     })
   })
+
+  describe('foco y anuncio al añadir ingrediente', () => {
+    it('anuncia el ingrediente añadido, resetea el select y devuelve el foco a él', async () => {
+      const { fixture, el, component } = await setup()
+      component.newIngredientId = 'ing-1'
+      component.newIngredientQty = 2
+
+      component.addIngredient()
+      fixture.detectChanges()
+      await fixture.whenStable()
+
+      expect(el.querySelector('[aria-live="polite"]')?.textContent).toContain('Tomate (kg) añadido')
+      expect(component.newIngredientId).toBe('')
+      expect(el.querySelector<HTMLSelectElement>('#new-ingredient')!.value).toBe('')
+      expect(document.activeElement?.id).toBe('new-ingredient')
+    })
+  })
 })

@@ -118,7 +118,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 
 ### Bloque E — Gestión del foco y anuncios
 
-- [ ] 17. **Foco y anuncio al añadir ingrediente.**
+- [x] 17. **Foco y anuncio al añadir ingrediente.**
   - Tests: tras `addIngredient()` válido, la región `[aria-live=polite]` contiene "Tomate (kg) añadido", el `<select>` se resetea y `document.activeElement` es `#new-ingredient` (para poder seguir añadiendo).
   - Código: signal `liveMessage`; `<div class="visually-hidden" aria-live="polite">{{ liveMessage() }}</div>`; foco de vuelta al select.
 - [ ] 18. **Foco y anuncio al quitar ingrediente.**
