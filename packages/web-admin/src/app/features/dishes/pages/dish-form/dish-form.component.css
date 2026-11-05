@@ -17,6 +17,11 @@
   background: var(--bg-hover);
 }
 
+.back-link:focus-visible {
+  color: var(--text-primary);
+  outline-offset: 0;
+}
+
 .form-card {
   max-width: 700px;
 }
@@ -84,6 +89,12 @@ textarea.form-control {
   background: var(--red-glow);
 }
 
+.chip-remove:focus-visible {
+  color: var(--red);
+  background: var(--red-glow);
+  outline-offset: 1px;
+}
+
 .add-ingredient-row {
   border: 0;
   padding: 0;
@@ -142,6 +153,18 @@ select.form-control {
 .error-summary a {
   color: var(--text-primary);
   text-decoration: underline;
+}
+
+.form-control[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+.form-control[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 3px var(--red-glow);
+}
+
+.ingredients-section .field-error {
+  margin-top: 8px;
 }
 
 .field-error {

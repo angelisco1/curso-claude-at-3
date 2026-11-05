@@ -131,7 +131,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 ### Bloque F — Foco visible y contraste (CSS)
 
 - [x] 20. **Foco visible global.** Quitar `outline: none` de `button` en `styles.css`; añadir `:where(a, button, input, select, textarea):focus-visible { outline: 2px solid var(--green-light); outline-offset: 2px; }` y la utilidad `.visually-hidden`. Mantener el `box-shadow` de `.form-control:focus` y añadir outline en `:focus-visible`. Comprobar a mano con Tab que todos los controles del formulario muestran foco.
-- [ ] 21. **Estilos del formulario.** En `dish-form.component.css`: estilos de `.field-error`, `.error-summary`, `[aria-invalid=true]` (borde rojo), `.chip-remove:focus-visible`, `.back-link:focus-visible`, reset de `ul`/`fieldset`; quitar las clases `fake-*`. Verificar que el orden visual coincide con el DOM (orden de tabulación: volver → nombre → precio → categoría → disponible → descripción → quitar chips → ingrediente → cantidad → añadir → cancelar → guardar).
+- [x] 21. **Estilos del formulario.** En `dish-form.component.css`: estilos de `.field-error`, `.error-summary`, `[aria-invalid=true]` (borde rojo), `.chip-remove:focus-visible`, `.back-link:focus-visible`, reset de `ul`/`fieldset`; quitar las clases `fake-*`. Verificar que el orden visual coincide con el DOM (orden de tabulación: volver → nombre → precio → categoría → disponible → descripción → quitar chips → ingrediente → cantidad → añadir → cancelar → guardar).
 
 ### Bloque G — E2E con axe y vídeo
 
