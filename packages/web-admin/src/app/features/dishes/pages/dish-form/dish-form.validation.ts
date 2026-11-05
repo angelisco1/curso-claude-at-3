@@ -9,5 +9,9 @@ export function validateDishForm(form: CreateDishDto): DishFormErrors {
     errors.name = 'El nombre es obligatorio'
   }
 
+  if (typeof form.price !== 'number' || Number.isNaN(form.price) || form.price <= 0) {
+    errors.price = 'El precio debe ser mayor que 0'
+  }
+
   return errors
 }

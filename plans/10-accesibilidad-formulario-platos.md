@@ -76,7 +76,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 5. **Validación del nombre.**
   - Tests: `validateDishForm` devuelve `{ name: 'El nombre es obligatorio' }` con `name: ''` y con `name: '   '`; no devuelve error de nombre con `'Pizza'`.
   - Código: crear `dish-form.validation.ts` con el tipo `DishFormErrors = Partial<Record<'name' | 'price', string>>` y `validateDishForm(form: CreateDishDto): DishFormErrors`.
-- [ ] 6. **Validación del precio.**
+- [x] 6. **Validación del precio.**
   - Tests: error `'El precio debe ser mayor que 0'` con `0`, `-1`, `null`/`NaN` (campo vacío en `type="number"`); sin error con `0.5` y `12`. Un formulario válido devuelve `{}`.
   - Código: añadir la regla de precio a `validateDishForm` (coherente con `InvalidPriceError` de la API: precio > 0).
 - [ ] 7. **Validación del nuevo ingrediente.**
