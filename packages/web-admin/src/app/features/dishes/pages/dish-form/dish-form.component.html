@@ -53,19 +53,21 @@
       <h2>Ingredientes del plato</h2>
 
       @if (form.ingredients.length > 0) {
-        <div class="ingredient-chips">
+        <ul class="ingredient-chips">
           @for (ing of form.ingredients; track ing.ingredientId) {
-            <div class="ingredient-chip">
+            <li class="ingredient-chip">
               <span>{{ getIngredientName(ing.ingredientId) }} — {{ ing.quantity }}</span>
-              <div class="chip-remove" (click)="removeIngredient(ing.ingredientId)">
+              <button type="button" class="chip-remove" [attr.aria-label]="'Quitar ' + getIngredientName(ing.ingredientId)"
+                (click)="removeIngredient(ing.ingredientId)">
                 <lucide-icon name="trash-2" [size]="12" aria-hidden="true"></lucide-icon>
-              </div>
-            </div>
+              </button>
+            </li>
           }
-        </div>
+        </ul>
       }
 
-      <div class="add-ingredient-row">
+      <fieldset class="add-ingredient-row">
+        <legend class="visually-hidden">Añadir ingrediente</legend>
         <label for="new-ingredient" class="visually-hidden">Ingrediente</label>
         <select id="new-ingredient" class="form-control" [(ngModel)]="newIngredientId" name="newIngredientId">
           <option value="">Seleccionar ingrediente</option>
@@ -75,10 +77,10 @@
         </select>
         <label for="new-ingredient-qty" class="visually-hidden">Cantidad</label>
         <input id="new-ingredient-qty" type="number" class="form-control qty-input" [(ngModel)]="newIngredientQty" name="newIngredientQty" placeholder="Cant." />
-        <div class="btn btn-secondary btn-sm" (click)="addIngredient()">
+        <button type="button" class="btn btn-secondary btn-sm" aria-label="Añadir ingrediente" (click)="addIngredient()">
           <lucide-icon name="plus" [size]="14" aria-hidden="true"></lucide-icon>
-        </div>
-      </div>
+        </button>
+      </fieldset>
     </div>
 
     <div class="form-actions">

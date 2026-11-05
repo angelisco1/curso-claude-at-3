@@ -94,7 +94,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 10. **Formulario real y botones de acción.**
   - Tests: existe un `<form>`; el botón "Guardar" es `button[type=submit]`; "Cancelar" es un `<a>` con `href` a `/restaurants/rest-1/dishes`; el enlace "volver" tiene `aria-label="Volver a la lista de platos"`; disparar `submit` en el `<form>` llama a `onSubmit`.
   - Código: envolver campos en `<form (ngSubmit)="onSubmit()" novalidate>`; `Guardar` → `<button type="submit" class="btn btn-primary" [disabled]="loading()">`; `Cancelar` → `<a class="btn btn-secondary" [routerLink]="listUrl">`; `aria-label` en el enlace "volver"; `aria-hidden="true"` en todos los `<lucide-icon>`.
-- [ ] 11. **Botones de ingredientes accesibles.**
+- [x] 11. **Botones de ingredientes accesibles.**
   - Tests: el botón de añadir es `button[type=button]` con `aria-label="Añadir ingrediente"`; con un ingrediente en `form.ingredients` se renderiza una `<ul>` con un `<li>` y un `button[type=button]` con `aria-label="Quitar Tomate (kg)"`; hacer `click()` en ellos (equivalente a Enter/Espacio en un `<button>` nativo) llama a `addIngredient`/`removeIngredient`.
   - Código: chips como `<ul class="ingredient-chips"><li class="ingredient-chip">…`; `chip-remove` y el `+` pasan a `<button type="button">` con `aria-label`; bloque "Añadir ingrediente" dentro de `<fieldset>` con `<legend class="visually-hidden">Añadir ingrediente</legend>`.
 

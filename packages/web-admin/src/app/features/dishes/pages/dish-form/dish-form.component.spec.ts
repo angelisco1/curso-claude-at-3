@@ -126,4 +126,38 @@ describe('DishFormComponent', () => {
       expect(spy).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe('botones de ingredientes', () => {
+    it('el botón de añadir es un button con nombre accesible y llama a addIngredient', async () => {
+      const { el, component } = await setup()
+      const spy = vi.spyOn(component, 'addIngredient')
+
+      const add = el.querySelector<HTMLButtonElement>('button[type="button"][aria-label="Añadir ingrediente"]')
+      expect(add).not.toBeNull()
+      add!.click()
+
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it('agrupa el bloque de añadir en un fieldset con legend oculta', async () => {
+      const { el } = await setup()
+
+      const legend = el.querySelector('fieldset > legend.visually-hidden')
+      expect(legend?.textContent?.trim()).toBe('Añadir ingrediente')
+    })
+
+    it('lista los ingredientes en una ul con un botón "Quitar" accesible por chip', async () => {
+      const { fixture, el, component } = await setup()
+      const spy = vi.spyOn(component, 'removeIngredient')
+      component.form.ingredients = [{ ingredientId: 'ing-1', quantity: 2 }]
+      fixture.detectChanges()
+
+      expect(el.querySelectorAll('ul.ingredient-chips > li.ingredient-chip')).toHaveLength(1)
+      const remove = el.querySelector<HTMLButtonElement>('li button[type="button"][aria-label="Quitar Tomate (kg)"]')
+      expect(remove).not.toBeNull()
+      remove!.click()
+
+      expect(spy).toHaveBeenCalledWith('ing-1')
+    })
+  })
 })
