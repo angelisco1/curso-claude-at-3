@@ -121,7 +121,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 17. **Foco y anuncio al añadir ingrediente.**
   - Tests: tras `addIngredient()` válido, la región `[aria-live=polite]` contiene "Tomate (kg) añadido", el `<select>` se resetea y `document.activeElement` es `#new-ingredient` (para poder seguir añadiendo).
   - Código: signal `liveMessage`; `<div class="visually-hidden" aria-live="polite">{{ liveMessage() }}</div>`; foco de vuelta al select.
-- [ ] 18. **Foco y anuncio al quitar ingrediente.**
+- [x] 18. **Foco y anuncio al quitar ingrediente.**
   - Tests: con 2 ingredientes, quitar el primero mueve el foco al botón "Quitar" del siguiente; quitar el último que queda mueve el foco a `#new-ingredient`; la región `aria-live` anuncia "Tomate (kg) eliminado".
   - Código: `viewChildren` de los botones de quitar (o `querySelectorAll`) y lógica de foco tras el render (`afterNextRender` con `injector`).
 - [ ] 19. **Título de página por ruta.**

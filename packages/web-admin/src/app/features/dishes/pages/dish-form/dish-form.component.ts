@@ -135,7 +135,26 @@ export class DishFormComponent implements OnInit {
   }
 
   removeIngredient(ingredientId: string): void {
+    const index = this.form.ingredients.findIndex(i => i.ingredientId === ingredientId)
+    if (index === -1) return
+
+    const name = this.getIngredientName(ingredientId)
     this.form.ingredients = this.form.ingredients.filter(i => i.ingredientId !== ingredientId)
+    this.liveMessage.set(`${name} eliminado`)
+
+    // El botón enfocado desaparece: el foco pasa al siguiente "Quitar" (o al anterior, o al select si no quedan)
+    const remaining = this.form.ingredients.length
+    afterNextRender(
+      () => {
+        if (remaining === 0) {
+          this.focusField('new-ingredient')
+          return
+        }
+        const buttons = this.host.nativeElement.querySelectorAll<HTMLElement>('.chip-remove')
+        buttons[Math.min(index, remaining - 1)]?.focus()
+      },
+      { injector: this.injector }
+    )
   }
 
   getIngredientName(ingredientId: string): string {

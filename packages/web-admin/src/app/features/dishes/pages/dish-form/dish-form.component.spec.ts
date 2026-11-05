@@ -362,4 +362,49 @@ describe('DishFormComponent', () => {
       expect(document.activeElement?.id).toBe('new-ingredient')
     })
   })
+
+  describe('foco y anuncio al quitar ingrediente', () => {
+    const TWO = [
+      { ingredientId: 'ing-1', quantity: 2 },
+      { ingredientId: 'ing-2', quantity: 1 }
+    ]
+
+    it('quitar el primero mueve el foco al botón Quitar del siguiente y lo anuncia', async () => {
+      const { fixture, el, component } = await setup()
+      component.form.ingredients = [...TWO]
+      fixture.detectChanges()
+
+      component.removeIngredient('ing-1')
+      fixture.detectChanges()
+      await fixture.whenStable()
+
+      expect(el.querySelector('[aria-live="polite"]')?.textContent).toContain('Tomate (kg) eliminado')
+      expect((document.activeElement as HTMLElement).getAttribute('aria-label')).toBe('Quitar Queso (kg)')
+    })
+
+    it('quitar el último de la lista mueve el foco al botón Quitar anterior', async () => {
+      const { fixture, el, component } = await setup()
+      component.form.ingredients = [...TWO]
+      fixture.detectChanges()
+
+      component.removeIngredient('ing-2')
+      fixture.detectChanges()
+      await fixture.whenStable()
+
+      expect(el.querySelector('[aria-live="polite"]')?.textContent).toContain('Queso (kg) eliminado')
+      expect((document.activeElement as HTMLElement).getAttribute('aria-label')).toBe('Quitar Tomate (kg)')
+    })
+
+    it('quitar el único ingrediente mueve el foco al select de ingrediente', async () => {
+      const { fixture, component } = await setup()
+      component.form.ingredients = [TWO[0]]
+      fixture.detectChanges()
+
+      component.removeIngredient('ing-1')
+      fixture.detectChanges()
+      await fixture.whenStable()
+
+      expect(document.activeElement?.id).toBe('new-ingredient')
+    })
+  })
 })
