@@ -178,7 +178,7 @@ select.form-control {
 
 .required-mark {
   font-weight: 400;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .btn, .chip-remove {
