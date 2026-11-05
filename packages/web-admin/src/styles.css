@@ -55,8 +55,12 @@ button {
   font-family: inherit;
   cursor: pointer;
   border: none;
-  outline: none;
   font-size: inherit;
+}
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--green-light);
+  outline-offset: 2px;
 }
 
 input, select, textarea {
@@ -133,7 +137,6 @@ input, select, textarea {
 }
 
 .form-control:focus {
-  outline: none;
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--green-glow);
 }
