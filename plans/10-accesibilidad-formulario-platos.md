@@ -88,7 +88,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 8. **Montaje del componente en TestBed.**
   - Tests: el componente se crea con `provideRouter([])`, `ActivatedRoute` simulado (`parent.snapshot.params.restaurantId = 'rest-1'`) y dobles de `DishStore`, `DishService` e `IngredientStore` (con `ingredients` como `signal` con 2 ingredientes de prueba); renderiza un `<h1>` con texto "Nuevo plato".
   - Código: cambiar `<div class="fake-title">` por `<h1>` y "Ingredientes del plato" por `<h2>`; eliminar las clases `fake-*` del CSS y reutilizar los estilos de `.page-header h1`.
-- [ ] 9. **Etiquetas asociadas a los campos.**
+- [x] 9. **Etiquetas asociadas a los campos.**
   - Tests: existen y están asociados por `for`/`id` los controles con label "Nombre del plato", "Precio (€)", "Categoría", "Disponible", "Descripción (opcional)", "Ingrediente" y "Cantidad" (buscar `label[for=X]` y `#X`); nombre y precio tienen `required` y `aria-required="true"`.
   - Código: sustituir `<div class="fake-label">` por `<label for>` con `id` únicos (`dish-name`, `dish-price`, `dish-category`, `dish-available`, `dish-description`, `new-ingredient`, `new-ingredient-qty`); añadir indicador visual "(obligatorio)"; `step="0.01"`, `min="0"` e `inputmode="decimal"` en precio; `autocomplete="off"` en nombre.
 - [ ] 10. **Formulario real y botones de acción.**

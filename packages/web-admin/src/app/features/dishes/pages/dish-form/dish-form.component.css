@@ -113,10 +113,9 @@ select.form-control {
   padding-right: 32px;
 }
 
-.fake-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
+.required-mark {
+  font-weight: 400;
+  color: var(--text-muted);
 }
 
 .btn, .chip-remove {

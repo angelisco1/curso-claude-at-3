@@ -15,18 +15,20 @@
   <div class="card form-card">
     <div class="form-grid">
       <div class="form-group">
-        <div class="fake-label">Nombre del plato</div>
-        <input type="text" class="form-control" [(ngModel)]="form.name" name="name" placeholder="Ensalada César" />
+        <label for="dish-name">Nombre del plato <span class="required-mark">(obligatorio)</span></label>
+        <input id="dish-name" type="text" class="form-control" [(ngModel)]="form.name" name="name"
+          placeholder="Ensalada César" autocomplete="off" required aria-required="true" />
       </div>
 
       <div class="form-group">
-        <div class="fake-label">Precio (€)</div>
-        <input type="number" class="form-control" [(ngModel)]="form.price" name="price" />
+        <label for="dish-price">Precio (€) <span class="required-mark">(obligatorio)</span></label>
+        <input id="dish-price" type="number" class="form-control" [(ngModel)]="form.price" name="price"
+          step="0.01" min="0" inputmode="decimal" required aria-required="true" />
       </div>
 
       <div class="form-group">
-        <div class="fake-label">Categoría</div>
-        <select class="form-control" [(ngModel)]="form.category" name="category">
+        <label for="dish-category">Categoría</label>
+        <select id="dish-category" class="form-control" [(ngModel)]="form.category" name="category">
           @for (c of categories; track c) {
             <option [value]="c">{{ getCategoryLabel(c) }}</option>
           }
@@ -34,16 +36,16 @@
       </div>
 
       <div class="form-group">
-        <div class="fake-label">Disponible</div>
-        <select class="form-control" [(ngModel)]="form.available" name="available">
+        <label for="dish-available">Disponible</label>
+        <select id="dish-available" class="form-control" [(ngModel)]="form.available" name="available">
           <option [ngValue]="true">Sí</option>
           <option [ngValue]="false">No</option>
         </select>
       </div>
 
       <div class="form-group form-full">
-        <div class="fake-label">Descripción (opcional)</div>
-        <textarea class="form-control" [(ngModel)]="form.description" name="description" rows="3" placeholder="Una deliciosa ensalada con..."></textarea>
+        <label for="dish-description">Descripción (opcional)</label>
+        <textarea id="dish-description" class="form-control" [(ngModel)]="form.description" name="description" rows="3" placeholder="Una deliciosa ensalada con..."></textarea>
       </div>
     </div>
 
@@ -64,13 +66,15 @@
       }
 
       <div class="add-ingredient-row">
-        <select class="form-control" [(ngModel)]="newIngredientId" name="newIngredientId">
+        <label for="new-ingredient" class="visually-hidden">Ingrediente</label>
+        <select id="new-ingredient" class="form-control" [(ngModel)]="newIngredientId" name="newIngredientId">
           <option value="">Seleccionar ingrediente</option>
           @for (i of ingredientStore.ingredients(); track i.id) {
             <option [value]="i.id">{{ i.name }} ({{ i.unit }})</option>
           }
         </select>
-        <input type="number" class="form-control qty-input" [(ngModel)]="newIngredientQty" name="newIngredientQty" placeholder="Cant." />
+        <label for="new-ingredient-qty" class="visually-hidden">Cantidad</label>
+        <input id="new-ingredient-qty" type="number" class="form-control qty-input" [(ngModel)]="newIngredientQty" name="newIngredientQty" placeholder="Cant." />
         <div class="btn btn-secondary btn-sm" (click)="addIngredient()">
           <lucide-icon name="plus" [size]="14"></lucide-icon>
         </div>
