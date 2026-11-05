@@ -124,7 +124,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 18. **Foco y anuncio al quitar ingrediente.**
   - Tests: con 2 ingredientes, quitar el primero mueve el foco al botón "Quitar" del siguiente; quitar el último que queda mueve el foco a `#new-ingredient`; la región `aria-live` anuncia "Tomate (kg) eliminado".
   - Código: `viewChildren` de los botones de quitar (o `querySelectorAll`) y lógica de foco tras el render (`afterNextRender` con `injector`).
-- [ ] 19. **Título de página por ruta.**
+- [x] 19. **Título de página por ruta.**
   - Tests: (`dishes.routes.spec.ts` o dentro del spec del componente) la ruta `new` tiene `title: 'Nuevo plato · RestTek'` y `:id/edit` tiene `title: 'Editar plato · RestTek'`.
   - Código: añadir `title` en `dishes.routes.ts`.
 

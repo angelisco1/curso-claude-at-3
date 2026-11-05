@@ -7,10 +7,12 @@ export const DISH_ROUTES: Routes = [
   },
   {
     path: 'new',
+    title: 'Nuevo plato · RestTek',
     loadComponent: () => import('./pages/dish-form/dish-form.component').then(m => m.DishFormComponent)
   },
   {
     path: ':id/edit',
+    title: 'Editar plato · RestTek',
     loadComponent: () => import('./pages/dish-form/dish-form.component').then(m => m.DishFormComponent)
   }
 ]
