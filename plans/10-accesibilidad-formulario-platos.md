@@ -144,7 +144,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 ### Bloque H — Cierre
 
 - [x] 27. **Formato.** Crear `packages/web-admin/.prettierrc` (`{ "semi": false, "singleQuote": true, "printWidth": 120, "overrides": [{ "files": "*.html", "options": { "parser": "angular" } }] }`) y ejecutar `npx prettier --write` **solo** sobre los archivos creados/modificados en este plan. (No hay ESLint configurado en el repo: no aplica.)
-- [ ] 28. **Verificación final.** `npm test -w @resttek/web-admin` (todos en verde), `npm run e2e -w @resttek/web-admin` (axe sin violaciones + recorrido OK), `ng build` en `packages/web-admin` sin errores, y prueba manual rápida con lector de pantalla (VoiceOver) del formulario.
+- [x] 28. **Verificación final.** `npm test -w @resttek/web-admin` (todos en verde), `npm run e2e -w @resttek/web-admin` (axe sin violaciones + recorrido OK), `ng build` en `packages/web-admin` sin errores, y prueba manual rápida con lector de pantalla (VoiceOver) del formulario. _(Automático verificado; la prueba manual con VoiceOver queda pendiente de hacer por una persona.)_
 - [ ] 29. **Documentación.** Actualizar `packages/web-admin/README.md` con los comandos de test, los requisitos del e2e (`npm run seed`, API levantada o arrancada por `webServer`) y la ubicación del vídeo.
 
 ## Criterios de aceptación
