@@ -85,7 +85,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 
 ### Bloque C — Semántica y nombres accesibles del componente
 
-- [ ] 8. **Montaje del componente en TestBed.**
+- [x] 8. **Montaje del componente en TestBed.**
   - Tests: el componente se crea con `provideRouter([])`, `ActivatedRoute` simulado (`parent.snapshot.params.restaurantId = 'rest-1'`) y dobles de `DishStore`, `DishService` e `IngredientStore` (con `ingredients` como `signal` con 2 ingredientes de prueba); renderiza un `<h1>` con texto "Nuevo plato".
   - Código: cambiar `<div class="fake-title">` por `<h1>` y "Ingredientes del plato" por `<h2>`; eliminar las clases `fake-*` del CSS y reutilizar los estilos de `.page-header h1`.
 - [ ] 9. **Etiquetas asociadas a los campos.**

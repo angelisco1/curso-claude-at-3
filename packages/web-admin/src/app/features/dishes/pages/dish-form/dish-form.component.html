@@ -4,7 +4,7 @@
       <a [routerLink]="listUrl" class="back-link">
         <lucide-icon name="chevron-left" [size]="18"></lucide-icon>
       </a>
-      <div class="fake-title">{{ pageTitle }}</div>
+      <h1>{{ pageTitle }}</h1>
     </div>
   </div>
 
@@ -48,7 +48,7 @@
     </div>
 
     <div class="ingredients-section">
-      <div class="fake-subtitle">Ingredientes del plato</div>
+      <h2>Ingredientes del plato</h2>
 
       @if (form.ingredients.length > 0) {
         <div class="ingredient-chips">
