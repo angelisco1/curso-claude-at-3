@@ -231,4 +231,41 @@ describe('DishFormComponent', () => {
       expect(el.querySelector('#dish-price-error')).toBeNull()
     })
   })
+
+  describe('resumen de errores y foco', () => {
+    it('muestra un resumen con role=alert y enfoca el nombre cuando falla primero', async () => {
+      const { fixture, el, component } = await setup()
+      component.form.name = ''
+      component.form.price = 0
+
+      await component.onSubmit()
+      fixture.detectChanges()
+      await fixture.whenStable()
+
+      const summary = el.querySelector('.error-summary[role="alert"]')
+      expect(summary?.textContent).toContain('Revisa los campos marcados: 2 errores')
+      expect(summary?.querySelector('a[href="#dish-name"]')).not.toBeNull()
+      expect(document.activeElement?.id).toBe('dish-name')
+    })
+
+    it('enfoca el precio si solo falla el precio y usa singular con un error', async () => {
+      const { fixture, el, component } = await setup()
+      component.form.name = 'Pizza'
+      component.form.price = 0
+
+      await component.onSubmit()
+      fixture.detectChanges()
+      await fixture.whenStable()
+
+      expect(el.querySelector('.error-summary')?.textContent).toContain('Revisa los campos marcados: 1 error')
+      expect(el.querySelector('.error-summary')?.textContent).not.toContain('1 errores')
+      expect(document.activeElement?.id).toBe('dish-price')
+    })
+
+    it('no hay resumen si no hay errores', async () => {
+      const { el } = await setup()
+
+      expect(el.querySelector('.error-summary')).toBeNull()
+    })
+  })
 })

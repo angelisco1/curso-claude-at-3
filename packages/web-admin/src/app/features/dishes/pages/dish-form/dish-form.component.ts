@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core'
+import { afterNextRender, Component, computed, ElementRef, inject, Injector, OnInit, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { LucideAngularModule } from 'lucide-angular'
@@ -22,6 +22,8 @@ export class DishFormComponent implements OnInit {
   readonly ingredientStore = inject(IngredientStore)
   private readonly route = inject(ActivatedRoute)
   private readonly router = inject(Router)
+  private readonly injector = inject(Injector)
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef)
 
   isEditing = false
   dishId: string | null = null
@@ -30,6 +32,20 @@ export class DishFormComponent implements OnInit {
   error = signal<string | null>(null)
   errors = signal<DishFormErrors>({})
   submitted = signal(false)
+
+  readonly errorList = computed(() => {
+    const errors = this.errors()
+    const fields = [
+      { id: 'dish-name', message: errors.name },
+      { id: 'dish-price', message: errors.price }
+    ]
+    return fields.filter((f): f is { id: string; message: string } => !!f.message)
+  })
+
+  readonly errorSummary = computed(() => {
+    const count = this.errorList().length
+    return `Revisa los campos marcados: ${count} ${count === 1 ? 'error' : 'errores'}`
+  })
 
   categories: DishCategory[] = ['entrante', 'principal', 'postre', 'bebida']
 
@@ -119,11 +135,19 @@ export class DishFormComponent implements OnInit {
     return ingredient ? `${ingredient.name} (${ingredient.unit})` : ingredientId
   }
 
+  focusField(id: string, event?: Event): void {
+    event?.preventDefault()
+    this.host.nativeElement.querySelector<HTMLElement>(`#${id}`)?.focus()
+  }
+
   async onSubmit(): Promise<void> {
     this.submitted.set(true)
     const errors = validateDishForm(this.form)
     this.errors.set(errors)
-    if (Object.keys(errors).length > 0) return
+    if (Object.keys(errors).length > 0) {
+      afterNextRender(() => this.focusField(this.errorList()[0].id), { injector: this.injector })
+      return
+    }
 
     this.error.set(null)
     this.loading.set(true)

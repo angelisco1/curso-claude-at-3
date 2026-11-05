@@ -8,6 +8,17 @@
     </div>
   </div>
 
+  @if (errorList().length > 0) {
+    <div class="error-summary" role="alert">
+      <p>{{ errorSummary() }}</p>
+      <ul>
+        @for (e of errorList(); track e.id) {
+          <li><a [attr.href]="'#' + e.id" (click)="focusField(e.id, $event)">{{ e.message }}</a></li>
+        }
+      </ul>
+    </div>
+  }
+
   @if (error()) {
     <div class="alert-error">{{ error() }}</div>
   }

@@ -106,7 +106,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 13. **Errores asociados a cada campo.**
   - Tests: tras enviar vacío, `#dish-name` tiene `aria-invalid="true"` y `aria-describedby="dish-name-error"`, y `#dish-name-error` contiene "El nombre es obligatorio"; lo mismo para el precio; tras corregir y reenviar, desaparecen `aria-invalid` y el mensaje.
   - Código: en la plantilla, `[attr.aria-invalid]` y `[attr.aria-describedby]` condicionales y `<p class="field-error" id="…-error">` con icono `aria-hidden` + texto (no solo color, WCAG 1.4.1).
-- [ ] 14. **Resumen de errores y foco al primer campo inválido.**
+- [x] 14. **Resumen de errores y foco al primer campo inválido.**
   - Tests: tras enviar vacío existe un elemento `role="alert"` con el texto "Revisa los campos marcados: 2 errores" y `document.activeElement` es `#dish-name`; si solo falla el precio, el foco va a `#dish-price`.
   - Código: bloque resumen con `role="alert"` encima del formulario (con enlaces `href="#dish-name"` a cada campo); `viewChild` de los inputs (o `ElementRef` + `querySelector`) y `focus()` sobre el primero con error tras `afterNextRender`/`setTimeout` (zoneless).
 - [ ] 15. **Error de servidor accesible.**
