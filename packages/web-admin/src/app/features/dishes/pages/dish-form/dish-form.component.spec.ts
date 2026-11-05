@@ -1,6 +1,6 @@
 import { importProvidersFrom, provideZonelessChangeDetection, signal } from '@angular/core'
 import { TestBed, type ComponentFixture } from '@angular/core/testing'
-import { ActivatedRoute, provideRouter } from '@angular/router'
+import { ActivatedRoute, Router, provideRouter } from '@angular/router'
 import { LucideAngularModule, ChevronLeft, Plus, Trash2, CircleAlert } from 'lucide-angular'
 import { DishFormComponent } from './dish-form.component'
 import { DishStore } from '../../store/dish.store'
@@ -158,6 +158,32 @@ describe('DishFormComponent', () => {
       remove!.click()
 
       expect(spy).toHaveBeenCalledWith('ing-1')
+    })
+  })
+
+  describe('envío', () => {
+    it('no llama al store si hay errores y los expone en errors()', async () => {
+      const { component, dishStore } = await setup()
+      component.form.name = ''
+
+      await component.onSubmit()
+
+      expect(dishStore.create).not.toHaveBeenCalled()
+      expect(component.errors().name).toBe('El nombre es obligatorio')
+      expect(component.submitted()).toBe(true)
+    })
+
+    it('con datos válidos crea el plato y navega a la lista', async () => {
+      const { component, dishStore } = await setup()
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true)
+      component.form.name = 'Pizza'
+      component.form.price = 10
+
+      await component.onSubmit()
+
+      expect(dishStore.create).toHaveBeenCalledWith('rest-1', component.form)
+      expect(component.errors()).toEqual({})
+      expect(navigate).toHaveBeenCalledWith(['/restaurants', 'rest-1', 'dishes'])
     })
   })
 })

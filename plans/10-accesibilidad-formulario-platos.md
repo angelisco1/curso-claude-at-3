@@ -100,7 +100,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 
 ### Bloque D — Errores accesibles
 
-- [ ] 12. **No enviar si hay errores.**
+- [x] 12. **No enviar si hay errores.**
   - Tests: con `name: ''`, `onSubmit()` no llama a `store.create` y `errors()` contiene el error de nombre; con datos válidos sí llama a `store.create('rest-1', form)` y navega a la lista.
   - Código: signal `errors = signal<DishFormErrors>({})` y `submitted = signal(false)`; `onSubmit()` ejecuta `validateDishForm` y retorna antes de llamar al store si hay errores.
 - [ ] 13. **Errores asociados a cada campo.**
