@@ -173,7 +173,7 @@ select.form-control {
   gap: 6px;
   margin: 0;
   font-size: 13px;
-  color: var(--red);
+  color: var(--red-text);
 }
 
 .required-mark {
