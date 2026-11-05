@@ -73,7 +73,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 
 ### Bloque B — Validación en cliente (función pura)
 
-- [ ] 5. **Validación del nombre.**
+- [x] 5. **Validación del nombre.**
   - Tests: `validateDishForm` devuelve `{ name: 'El nombre es obligatorio' }` con `name: ''` y con `name: '   '`; no devuelve error de nombre con `'Pizza'`.
   - Código: crear `dish-form.validation.ts` con el tipo `DishFormErrors = Partial<Record<'name' | 'price', string>>` y `validateDishForm(form: CreateDishDto): DishFormErrors`.
 - [ ] 6. **Validación del precio.**
