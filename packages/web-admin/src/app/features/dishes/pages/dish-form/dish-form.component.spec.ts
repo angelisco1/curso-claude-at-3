@@ -186,4 +186,49 @@ describe('DishFormComponent', () => {
       expect(navigate).toHaveBeenCalledWith(['/restaurants', 'rest-1', 'dishes'])
     })
   })
+
+  describe('errores asociados a los campos', () => {
+    it('tras enviar vacío, nombre y precio quedan marcados y enlazados a su mensaje', async () => {
+      const { fixture, el, component } = await setup()
+      component.form.name = ''
+      component.form.price = 0
+
+      await component.onSubmit()
+      fixture.detectChanges()
+
+      const name = el.querySelector('#dish-name')!
+      expect(name.getAttribute('aria-invalid')).toBe('true')
+      expect(name.getAttribute('aria-describedby')).toBe('dish-name-error')
+      expect(el.querySelector('#dish-name-error')?.textContent).toContain('El nombre es obligatorio')
+
+      const price = el.querySelector('#dish-price')!
+      expect(price.getAttribute('aria-invalid')).toBe('true')
+      expect(price.getAttribute('aria-describedby')).toBe('dish-price-error')
+      expect(el.querySelector('#dish-price-error')?.textContent).toContain('El precio debe ser mayor que 0')
+    })
+
+    it('sin errores no hay aria-invalid ni mensajes', async () => {
+      const { el } = await setup()
+
+      expect(el.querySelector('#dish-name')!.hasAttribute('aria-invalid')).toBe(false)
+      expect(el.querySelector('#dish-name')!.hasAttribute('aria-describedby')).toBe(false)
+      expect(el.querySelector('.field-error')).toBeNull()
+    })
+
+    it('al corregir y reenviar desaparecen los errores', async () => {
+      const { fixture, el, component } = await setup()
+      vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true)
+      await component.onSubmit()
+      fixture.detectChanges()
+      component.form.name = 'Pizza'
+      component.form.price = 10
+
+      await component.onSubmit()
+      fixture.detectChanges()
+
+      expect(el.querySelector('#dish-name')!.hasAttribute('aria-invalid')).toBe(false)
+      expect(el.querySelector('#dish-name-error')).toBeNull()
+      expect(el.querySelector('#dish-price-error')).toBeNull()
+    })
+  })
 })

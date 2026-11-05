@@ -17,13 +17,29 @@
       <div class="form-group">
         <label for="dish-name">Nombre del plato <span class="required-mark">(obligatorio)</span></label>
         <input id="dish-name" type="text" class="form-control" [(ngModel)]="form.name" name="name"
-          placeholder="Ensalada César" autocomplete="off" required aria-required="true" />
+          placeholder="Ensalada César" autocomplete="off" required aria-required="true"
+          [attr.aria-invalid]="errors().name ? 'true' : null"
+          [attr.aria-describedby]="errors().name ? 'dish-name-error' : null" />
+        @if (errors().name) {
+          <p class="field-error" id="dish-name-error">
+            <lucide-icon name="circle-alert" [size]="14" aria-hidden="true"></lucide-icon>
+            <span>{{ errors().name }}</span>
+          </p>
+        }
       </div>
 
       <div class="form-group">
         <label for="dish-price">Precio (€) <span class="required-mark">(obligatorio)</span></label>
         <input id="dish-price" type="number" class="form-control" [(ngModel)]="form.price" name="price"
-          step="0.01" min="0" inputmode="decimal" required aria-required="true" />
+          step="0.01" min="0" inputmode="decimal" required aria-required="true"
+          [attr.aria-invalid]="errors().price ? 'true' : null"
+          [attr.aria-describedby]="errors().price ? 'dish-price-error' : null" />
+        @if (errors().price) {
+          <p class="field-error" id="dish-price-error">
+            <lucide-icon name="circle-alert" [size]="14" aria-hidden="true"></lucide-icon>
+            <span>{{ errors().price }}</span>
+          </p>
+        }
       </div>
 
       <div class="form-group">

@@ -119,6 +119,15 @@ select.form-control {
   padding-right: 32px;
 }
 
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--red);
+}
+
 .required-mark {
   font-weight: 400;
   color: var(--text-muted);

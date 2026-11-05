@@ -103,7 +103,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 12. **No enviar si hay errores.**
   - Tests: con `name: ''`, `onSubmit()` no llama a `store.create` y `errors()` contiene el error de nombre; con datos válidos sí llama a `store.create('rest-1', form)` y navega a la lista.
   - Código: signal `errors = signal<DishFormErrors>({})` y `submitted = signal(false)`; `onSubmit()` ejecuta `validateDishForm` y retorna antes de llamar al store si hay errores.
-- [ ] 13. **Errores asociados a cada campo.**
+- [x] 13. **Errores asociados a cada campo.**
   - Tests: tras enviar vacío, `#dish-name` tiene `aria-invalid="true"` y `aria-describedby="dish-name-error"`, y `#dish-name-error` contiene "El nombre es obligatorio"; lo mismo para el precio; tras corregir y reenviar, desaparecen `aria-invalid` y el mensaje.
   - Código: en la plantilla, `[attr.aria-invalid]` y `[attr.aria-describedby]` condicionales y `<p class="field-error" id="…-error">` con icono `aria-hidden` + texto (no solo color, WCAG 1.4.1).
 - [ ] 14. **Resumen de errores y foco al primer campo inválido.**
