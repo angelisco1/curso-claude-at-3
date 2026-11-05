@@ -7,7 +7,7 @@ import { DishStore } from '../../store/dish.store'
 import { DishService } from '../../services/dish.service'
 import { IngredientStore } from '../../../ingredients/store/ingredient.store'
 import type { CreateDishDto, DishCategory } from '../../models/dish.model'
-import { validateDishForm, type DishFormErrors } from './dish-form.validation'
+import { validateDishForm, validateNewIngredient, type DishFormErrors, type NewIngredientErrors } from './dish-form.validation'
 
 @Component({
   selector: 'app-dish-form',
@@ -32,6 +32,7 @@ export class DishFormComponent implements OnInit {
   error = signal<string | null>(null)
   errors = signal<DishFormErrors>({})
   submitted = signal(false)
+  ingredientErrors = signal<NewIngredientErrors>({})
 
   readonly errorList = computed(() => {
     const errors = this.errors()
@@ -114,9 +115,13 @@ export class DishFormComponent implements OnInit {
   }
 
   addIngredient(): void {
-    if (!this.newIngredientId || this.newIngredientQty <= 0) return
-    const exists = this.form.ingredients.find(i => i.ingredientId === this.newIngredientId)
-    if (exists) return
+    const errors = validateNewIngredient(this.newIngredientId, this.newIngredientQty, this.form.ingredients)
+    this.ingredientErrors.set(errors)
+    if (errors.ingredient || errors.quantity) {
+      const fieldId = errors.ingredient ? 'new-ingredient' : 'new-ingredient-qty'
+      afterNextRender(() => this.focusField(fieldId), { injector: this.injector })
+      return
+    }
 
     this.form.ingredients = [
       ...this.form.ingredients,

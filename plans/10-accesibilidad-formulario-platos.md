@@ -112,7 +112,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 15. **Error de servidor accesible.**
   - Tests: si `store.create` rechaza con `{ error: { message: 'Boom' } }`, se renderiza `.alert-error[role=alert]` con "Boom" y el botón "Guardar" vuelve a estar habilitado.
   - Código: añadir `role="alert"` al `alert-error` existente; `aria-busy` en el `<form>` mientras `loading()`.
-- [ ] 16. **Errores al añadir ingrediente.**
+- [x] 16. **Errores al añadir ingrediente.**
   - Tests: `addIngredient()` sin seleccionar ingrediente no añade nada, muestra "Selecciona un ingrediente" asociado a `#new-ingredient` (`aria-invalid` + `aria-describedby`) y deja el foco en `#new-ingredient`; con cantidad `0` el error se asocia a `#new-ingredient-qty`.
   - Código: signal `ingredientErrors` usando `validateNewIngredient`; mensajes en plantilla; foco al campo erróneo.
 

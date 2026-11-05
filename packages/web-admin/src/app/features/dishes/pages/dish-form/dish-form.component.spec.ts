@@ -294,4 +294,55 @@ describe('DishFormComponent', () => {
       expect(el.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true)
     })
   })
+
+  describe('errores al añadir ingrediente', () => {
+    it('sin seleccionar ingrediente no añade, muestra el error asociado y enfoca el select', async () => {
+      const { fixture, el, component } = await setup()
+      component.newIngredientId = ''
+
+      component.addIngredient()
+      fixture.detectChanges()
+      await fixture.whenStable()
+
+      expect(component.form.ingredients).toEqual([])
+      const select = el.querySelector('#new-ingredient')!
+      expect(select.getAttribute('aria-invalid')).toBe('true')
+      expect(select.getAttribute('aria-describedby')).toBe('new-ingredient-error')
+      expect(el.querySelector('#new-ingredient-error')?.textContent).toContain('Selecciona un ingrediente')
+      expect(document.activeElement?.id).toBe('new-ingredient')
+    })
+
+    it('con cantidad 0 el error se asocia al campo de cantidad y lo enfoca', async () => {
+      const { fixture, el, component } = await setup()
+      component.newIngredientId = 'ing-1'
+      component.newIngredientQty = 0
+
+      component.addIngredient()
+      fixture.detectChanges()
+      await fixture.whenStable()
+
+      expect(component.form.ingredients).toEqual([])
+      const qty = el.querySelector('#new-ingredient-qty')!
+      expect(qty.getAttribute('aria-invalid')).toBe('true')
+      expect(qty.getAttribute('aria-describedby')).toBe('new-ingredient-qty-error')
+      expect(el.querySelector('#new-ingredient-qty-error')?.textContent).toContain('La cantidad debe ser mayor que 0')
+      expect(el.querySelector('#new-ingredient')!.hasAttribute('aria-invalid')).toBe(false)
+      expect(document.activeElement?.id).toBe('new-ingredient-qty')
+    })
+
+    it('al añadir uno válido se limpian los errores', async () => {
+      const { fixture, el, component } = await setup()
+      component.addIngredient()
+      fixture.detectChanges()
+      component.newIngredientId = 'ing-1'
+      component.newIngredientQty = 2
+
+      component.addIngredient()
+      fixture.detectChanges()
+
+      expect(component.form.ingredients).toEqual([{ ingredientId: 'ing-1', quantity: 2 }])
+      expect(component.ingredientErrors()).toEqual({})
+      expect(el.querySelector('#new-ingredient-error')).toBeNull()
+    })
+  })
 })

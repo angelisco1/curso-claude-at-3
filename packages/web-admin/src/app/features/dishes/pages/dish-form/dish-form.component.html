@@ -96,18 +96,35 @@
       <fieldset class="add-ingredient-row">
         <legend class="visually-hidden">Añadir ingrediente</legend>
         <label for="new-ingredient" class="visually-hidden">Ingrediente</label>
-        <select id="new-ingredient" class="form-control" [(ngModel)]="newIngredientId" name="newIngredientId">
+        <select id="new-ingredient" class="form-control" [(ngModel)]="newIngredientId" name="newIngredientId"
+          [attr.aria-invalid]="ingredientErrors().ingredient ? 'true' : null"
+          [attr.aria-describedby]="ingredientErrors().ingredient ? 'new-ingredient-error' : null">
           <option value="">Seleccionar ingrediente</option>
           @for (i of ingredientStore.ingredients(); track i.id) {
             <option [value]="i.id">{{ i.name }} ({{ i.unit }})</option>
           }
         </select>
         <label for="new-ingredient-qty" class="visually-hidden">Cantidad</label>
-        <input id="new-ingredient-qty" type="number" class="form-control qty-input" [(ngModel)]="newIngredientQty" name="newIngredientQty" placeholder="Cant." />
+        <input id="new-ingredient-qty" type="number" class="form-control qty-input" [(ngModel)]="newIngredientQty" name="newIngredientQty" placeholder="Cant."
+          [attr.aria-invalid]="ingredientErrors().quantity ? 'true' : null"
+          [attr.aria-describedby]="ingredientErrors().quantity ? 'new-ingredient-qty-error' : null" />
         <button type="button" class="btn btn-secondary btn-sm" aria-label="Añadir ingrediente" (click)="addIngredient()">
           <lucide-icon name="plus" [size]="14" aria-hidden="true"></lucide-icon>
         </button>
       </fieldset>
+
+      @if (ingredientErrors().ingredient) {
+        <p class="field-error" id="new-ingredient-error">
+          <lucide-icon name="circle-alert" [size]="14" aria-hidden="true"></lucide-icon>
+          <span>{{ ingredientErrors().ingredient }}</span>
+        </p>
+      }
+      @if (ingredientErrors().quantity) {
+        <p class="field-error" id="new-ingredient-qty-error">
+          <lucide-icon name="circle-alert" [size]="14" aria-hidden="true"></lucide-icon>
+          <span>{{ ingredientErrors().quantity }}</span>
+        </p>
+      }
     </div>
 
     <div class="form-actions">
