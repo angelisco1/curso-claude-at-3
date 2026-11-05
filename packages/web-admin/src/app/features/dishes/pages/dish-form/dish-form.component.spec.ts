@@ -268,4 +268,30 @@ describe('DishFormComponent', () => {
       expect(el.querySelector('.error-summary')).toBeNull()
     })
   })
+
+  describe('error de servidor', () => {
+    it('anuncia el error con role=alert y deja el botón Guardar habilitado', async () => {
+      const { fixture, el, component, dishStore } = await setup()
+      dishStore.create.mockRejectedValue({ error: { message: 'Boom' } })
+      component.form.name = 'Pizza'
+      component.form.price = 10
+
+      await component.onSubmit()
+      fixture.detectChanges()
+
+      expect(el.querySelector('.alert-error[role="alert"]')?.textContent).toContain('Boom')
+      expect(el.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(false)
+      expect(el.querySelector('form')!.getAttribute('aria-busy')).toBe('false')
+    })
+
+    it('marca el formulario como ocupado mientras guarda', async () => {
+      const { fixture, el, component } = await setup()
+
+      component.loading.set(true)
+      fixture.detectChanges()
+
+      expect(el.querySelector('form')!.getAttribute('aria-busy')).toBe('true')
+      expect(el.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true)
+    })
+  })
 })

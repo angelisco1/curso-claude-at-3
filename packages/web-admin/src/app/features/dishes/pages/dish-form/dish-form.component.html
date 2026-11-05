@@ -20,10 +20,10 @@
   }
 
   @if (error()) {
-    <div class="alert-error">{{ error() }}</div>
+    <div class="alert-error" role="alert">{{ error() }}</div>
   }
 
-  <form class="card form-card" (ngSubmit)="onSubmit()" novalidate>
+  <form class="card form-card" (ngSubmit)="onSubmit()" novalidate [attr.aria-busy]="loading()">
     <div class="form-grid">
       <div class="form-group">
         <label for="dish-name">Nombre del plato <span class="required-mark">(obligatorio)</span></label>

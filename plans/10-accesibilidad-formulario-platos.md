@@ -109,7 +109,7 @@ Cada tarea debe poder hacerse en 5-10 minutos. En las tareas de código se sigue
 - [x] 14. **Resumen de errores y foco al primer campo inválido.**
   - Tests: tras enviar vacío existe un elemento `role="alert"` con el texto "Revisa los campos marcados: 2 errores" y `document.activeElement` es `#dish-name`; si solo falla el precio, el foco va a `#dish-price`.
   - Código: bloque resumen con `role="alert"` encima del formulario (con enlaces `href="#dish-name"` a cada campo); `viewChild` de los inputs (o `ElementRef` + `querySelector`) y `focus()` sobre el primero con error tras `afterNextRender`/`setTimeout` (zoneless).
-- [ ] 15. **Error de servidor accesible.**
+- [x] 15. **Error de servidor accesible.**
   - Tests: si `store.create` rechaza con `{ error: { message: 'Boom' } }`, se renderiza `.alert-error[role=alert]` con "Boom" y el botón "Guardar" vuelve a estar habilitado.
   - Código: añadir `role="alert"` al `alert-error` existente; `aria-busy` en el `<form>` mientras `loading()`.
 - [ ] 16. **Errores al añadir ingrediente.**
