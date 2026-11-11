@@ -58,14 +58,15 @@ Contexto adicional del usuario (opcional): $ARGUMENTS
 0. Si el proyecto no está inicializado, inicializalo primero con `git init`.
 1. Analiza los cambios del contexto y determina el tipo y el ámbito más adecuados.
 2. Si no hay nada en staging, añade solo los archivos relevantes con `git add <archivos>` (nunca `git add -A` a ciegas, y no incluyas ficheros sensibles como `.env` ni `*.db`).
-3. Crea el commit con `git commit -m` usando un HEREDOC para respetar saltos de línea.
-4. Termina el mensaje del commit con la línea de atribución:
+3. Antes de hacer el commit, muestrale al usuario el mensaje de commit que vas a utilizar y preguntale con la tool `AskUserQuestion` si le parece bien, o prefiere otro mensaje. Si quiere otro mensaje, genera otra versión del mensaje y vuelve a preguntarle. Dale la opción a que el ponga el mensaje también.
+4. Crea el commit con `git commit -m` usando un HEREDOC para respetar saltos de línea.
+5. Termina el mensaje del commit con la línea de atribución:
 
    ```
    Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
    ```
 
-5. Ejecuta `git status` al final para confirmar que el commit se ha creado y muestra el mensaje resultante.
+6. Ejecuta `git status` al final para confirmar que el commit se ha creado y muestra el mensaje resultante.
 
 ### Restricciones
 
