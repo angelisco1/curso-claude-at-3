@@ -26,6 +26,9 @@ Genera un plan de implementación con un formato único para todo el equipo. **N
    - `<breve-descripcion>` en kebab-case, minúsculas, sin tildes y de 2 a 5 palabras (ej.: `plans/42-paginacion-vendehumos.md`).
    - Si el archivo ya existe, no lo sobrescribas sin confirmar con el usuario.
 5. **Responde** con la ruta del archivo creado y un resumen muy breve, destacando las dudas y decisiones que requieren revisión del usuario.
+6. **Avisa por Slack**: como último paso, envía un mensaje al canal de Slack `curso-claude-ed3` indicando que ya se ha planificado la tarea. Usa la herramienta MCP de Slack (`mcp__slack__slack_post_message` para publicar el mensaje en el canal con el id "C0CGZ01R9M2"; si no están cargadas, cárgalas antes con ToolSearch).
+   - El mensaje debe incluir el número de issue, una descripción breve y la ruta del plan (ej.: `Ya se ha planificado la issue 42 (paginación de vendehumos): plans/42-paginacion-vendehumos.md`).
+   - No incluyas datos privados (emails, rutas locales absolutas, secretos). Si no se puede enviar el mensaje, informa al usuario del fallo, sin reintentar en bucle.
 
 ## Reglas
 

@@ -43,9 +43,15 @@ Tareas sin comportamiento testable (instalar dependencias, crear archivos de con
 
 ### 4. Cierre
 
-- Cuando todas las tareas estén en `- [x]`, recorre los **criterios de aceptación** del plan y comprueba cada uno (tests, ejecución real si procede). Informa de los que no se cumplan.
+- Cuando todas las tareas estén en `- [x]`, recorre los **criterios de aceptación** del plan y comprueba cada uno (tests, ejecución real si procede). Informa de los que no se cumplan y aquellos que se cumplan, marcalos `- [x]`.
 - Ejecuta `git status` y `git log --oneline` para confirmar que el árbol está limpio y hay un commit por tarea.
 - Responde con: rama usada, tareas completadas, resultado de la suite de tests y cualquier decisión o desviación respecto al plan.
+
+### 5. Avisa por Slack
+
+- Como último paso, envía un mensaje al canal de Slack `curso-claude-ed3` indicando que el plan ya se ha implementado. Usa la herramienta MCP de Slack (`mcp__slack__slack_post_message` para publicar el mensaje en el canal con el id "C0CGZ01R9M2"; si no está cargada, cárgala antes con ToolSearch).
+- El mensaje debe incluir el nombre del plan y la rama (ej.: `Ya se ha implementado el plan 1-login-registro-usuarios-jwt (rama 1-login-registro-usuarios-jwt).`). Si quedaron tareas sin completar o criterios sin cumplir, indícalo en el mensaje en lugar de decir que está terminado.
+- No incluyas datos privados (emails, rutas locales, secretos). Si no se puede enviar el mensaje, informa al usuario del fallo, sin reintentar en bucle.
 
 ## Reglas
 

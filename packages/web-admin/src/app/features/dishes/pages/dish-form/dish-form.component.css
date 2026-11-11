@@ -17,6 +17,11 @@
   background: var(--bg-hover);
 }
 
+.back-link:focus-visible {
+  color: var(--text-primary);
+  outline-offset: 0;
+}
+
 .form-card {
   max-width: 700px;
 }
@@ -42,7 +47,7 @@ textarea.form-control {
   border-top: 1px solid var(--border-color);
 }
 
-.ingredients-section h3 {
+.ingredients-section h2 {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
@@ -50,6 +55,8 @@ textarea.form-control {
 }
 
 .ingredient-chips {
+  list-style: none;
+  padding: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -82,7 +89,17 @@ textarea.form-control {
   background: var(--red-glow);
 }
 
+.chip-remove:focus-visible {
+  color: var(--red);
+  background: var(--red-glow);
+  outline-offset: 1px;
+}
+
 .add-ingredient-row {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
   display: flex;
   gap: 10px;
   align-items: flex-end;
@@ -113,25 +130,58 @@ select.form-control {
   padding-right: 32px;
 }
 
-.fake-title {
-  font-size: 22px;
-  font-weight: 600;
+.error-summary {
+  max-width: 700px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--red);
+  border-radius: var(--radius-sm);
+  background: var(--red-glow);
   color: var(--text-primary);
 }
 
-.fake-label {
+.error-summary p {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.error-summary ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.error-summary a {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.form-control[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+.form-control[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 3px var(--red-glow);
+}
+
+.ingredients-section .field-error {
+  margin-top: 8px;
+}
+
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
   font-size: 13px;
-  font-weight: 500;
+  color: var(--red-text);
+}
+
+.required-mark {
+  font-weight: 400;
   color: var(--text-secondary);
 }
 
-.fake-subtitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 14px;
-}
-
-.btn, .chip-remove {
+.btn,
+.chip-remove {
   cursor: pointer;
 }

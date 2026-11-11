@@ -42,3 +42,12 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Playwright
+/test-results
+/playwright-report
+/blob-report
+
+# Vídeos e2e (se generan en local, no se versionan)
+/e2e-videos/*
+!/e2e-videos/.gitkeep

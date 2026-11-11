@@ -3,8 +3,21 @@ import { provideRouter } from '@angular/router'
 import { provideHttpClient, withInterceptors } from '@angular/common/http'
 import {
   LucideAngularModule,
-  LayoutDashboard, Users, Utensils, Package, LogOut, Plus,
-  Edit, Trash2, ChevronLeft, ChevronRight, Search, Menu, Settings, Store
+  LayoutDashboard,
+  Users,
+  Utensils,
+  Package,
+  LogOut,
+  Plus,
+  Edit,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Menu,
+  Settings,
+  Store,
+  CircleAlert,
 } from 'lucide-angular'
 
 import { routes } from './app.routes'
@@ -16,14 +29,25 @@ export const appConfig: ApplicationConfig = {
     { provide: API_URL, useValue: environment.apiUrl },
     provideZonelessChangeDetection(),
     provideRouter(routes),
-    provideHttpClient(
-      withInterceptors([authInterceptor, errorInterceptor])
-    ),
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     importProvidersFrom(
       LucideAngularModule.pick({
-        LayoutDashboard, Users, Utensils, Package, LogOut, Plus,
-        Edit, Trash2, ChevronLeft, ChevronRight, Search, Menu, Settings, Store
-      })
-    )
-  ]
+        LayoutDashboard,
+        Users,
+        Utensils,
+        Package,
+        LogOut,
+        Plus,
+        Edit,
+        Trash2,
+        ChevronLeft,
+        ChevronRight,
+        Search,
+        Menu,
+        Settings,
+        Store,
+        CircleAlert,
+      }),
+    ),
+  ],
 }
