@@ -135,17 +135,17 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 
 ## Criterios de aceptación
 
-- [ ] Un admin puede crear, listar, editar y borrar mesas de un restaurante desde `web-admin`; no se permiten dos mesas con el mismo número en el mismo restaurante (409) ni capacidad/número < 1 (400).
-- [ ] `GET /api/v1/restaurants/:restaurantId/tables/available?people=N` devuelve solo mesas `libre` con `capacity >= N` de ese restaurante.
-- [ ] `POST /api/v1/restaurants/:restaurantId/tables/:id/occupy` pone la mesa en `ocupada`; una segunda llamada sobre la misma mesa (o con más personas que su capacidad) responde 409 y no cambia nada.
-- [ ] En `web-clientes`, al elegir un restaurante se pide el nº de personas, se muestran las mesas disponibles y, tras elegir una y pulsar "Continuar", la mesa queda `ocupada` y se muestra la carta.
-- [ ] No se puede acceder a la carta de un restaurante sin haber seleccionado mesa en él (redirige a la selección).
-- [ ] El pedido enviado desde el carrito se guarda con el `tableId` de la mesa elegida.
-- [ ] En `web-empleados`, la página "Mesas" muestra todas las mesas del restaurante del empleado con su estado, permite cambiarlo y, en las ocupadas, muestra los pedidos activos con el estado de sus ítems.
-- [ ] Solo admin puede crear/editar/borrar mesas; un cliente no puede listar todas las mesas ni cambiar su estado (403).
-- [ ] No se puede borrar una mesa `ocupada` (409).
-- [ ] `npm test` pasa en verde con los nuevos tests de modelo, servicio y repositorio, y `ng build` compila las tres apps.
-- [ ] `npm run seed` crea mesas de ejemplo y puede ejecutarse varias veces sin duplicarlas.
+- [x] Un admin puede crear, listar, editar y borrar mesas de un restaurante desde `web-admin`; no se permiten dos mesas con el mismo número en el mismo restaurante (409) ni capacidad/número < 1 (400).
+- [x] `GET /api/v1/restaurants/:restaurantId/tables/available?people=N` devuelve solo mesas `libre` con `capacity >= N` de ese restaurante. (además, según la decisión del contrato, las `reservada` para el propio cliente, marcadas con `reservedForMe`)
+- [x] `POST /api/v1/restaurants/:restaurantId/tables/:id/occupy` pone la mesa en `ocupada`; una segunda llamada sobre la misma mesa (o con más personas que su capacidad) responde 409 y no cambia nada.
+- [x] En `web-clientes`, al elegir un restaurante se pide el nº de personas, se muestran las mesas disponibles y, tras elegir una y pulsar "Continuar", la mesa queda `ocupada` y se muestra la carta.
+- [x] No se puede acceder a la carta de un restaurante sin haber seleccionado mesa en él (redirige a la selección).
+- [x] El pedido enviado desde el carrito se guarda con el `tableId` de la mesa elegida.
+- [x] En `web-empleados`, la página "Mesas" muestra todas las mesas del restaurante del empleado con su estado, permite cambiarlo y, en las ocupadas, muestra los pedidos activos con el estado de sus ítems.
+- [x] Solo admin puede crear/editar/borrar mesas; un cliente no puede listar todas las mesas ni cambiar su estado (403).
+- [x] No se puede borrar una mesa `ocupada` (409).
+- [x] `npm test` pasa en verde con los nuevos tests de modelo, servicio y repositorio, y `ng build` compila las tres apps.
+- [x] `npm run seed` crea mesas de ejemplo y puede ejecutarse varias veces sin duplicarlas.
 
 ## Dudas y decisiones tomadas
 
