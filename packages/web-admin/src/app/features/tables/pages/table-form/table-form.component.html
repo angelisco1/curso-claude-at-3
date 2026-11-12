@@ -1,0 +1,63 @@
+<div class="fade-in">
+  <div class="page-header">
+    <div class="header-back">
+      <a [routerLink]="listUrl" class="back-link">
+        <lucide-icon name="chevron-left" [size]="18"></lucide-icon>
+      </a>
+      <h1>{{ pageTitle }}</h1>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert-error" data-testid="table-form-error">{{ error() }}</div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="card form-card">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="number">Número de mesa</label>
+        <input id="number" type="number" class="form-control" formControlName="number" data-testid="table-number-input" min="1" step="1" placeholder="1" />
+        @if (form.controls.number.touched && form.controls.number.invalid) {
+          <small class="field-error">El número es obligatorio y debe ser un entero mayor o igual que 1.</small>
+        }
+        @if (numberError()) {
+          <small class="field-error" data-testid="table-number-error">{{ numberError() }}</small>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="capacity">Capacidad (comensales)</label>
+        <input id="capacity" type="number" class="form-control" formControlName="capacity" data-testid="table-capacity-input" min="1" step="1" placeholder="4" />
+        @if (form.controls.capacity.touched && form.controls.capacity.invalid) {
+          <small class="field-error">La capacidad es obligatoria y debe ser un entero mayor o igual que 1.</small>
+        }
+      </div>
+
+      <div class="form-group full-width">
+        <label for="description">Descripción (opcional)</label>
+        <input id="description" type="text" class="form-control" formControlName="description" data-testid="table-description-input" placeholder="Junto a la ventana" />
+      </div>
+
+      @if (isEditing && currentStatus()) {
+        <div class="form-group full-width">
+          <span class="label">Estado actual</span>
+          <div>
+            <span class="badge badge-muted">{{ statusLabels[currentStatus()!] }}</span>
+          </div>
+          <small class="field-hint">El estado se cambia desde la aplicación de empleados.</small>
+        </div>
+      }
+    </div>
+
+    <div class="form-actions">
+      <a [routerLink]="listUrl" class="btn btn-secondary" data-testid="table-cancel-button">Cancelar</a>
+      <button type="submit" class="btn btn-primary" [disabled]="loading()" data-testid="table-submit-button">
+        @if (loading()) {
+          Guardando...
+        } @else {
+          Guardar
+        }
+      </button>
+    </div>
+  </form>
+</div>

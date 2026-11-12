@@ -1,0 +1,102 @@
+<div class="page-header">
+  <h1>Mesas</h1>
+</div>
+
+@if (tableStore.loading() && tableStore.tables().length === 0) {
+  <div class="spinner"></div>
+}
+
+@if (tableStore.error()) {
+  <div class="alert-error" role="alert" data-testid="mesas-error">{{ tableStore.error() }}</div>
+}
+
+@if (!tableStore.loading() || tableStore.tables().length > 0) {
+  @if (tableStore.tables().length === 0) {
+    <div class="empty-state" data-testid="mesas-empty"><p>Este restaurante no tiene mesas</p></div>
+  } @else {
+    <div class="tables-grid" data-testid="mesas-grid">
+      @for (table of tableStore.tables(); track table.id) {
+        <div class="table-card" [attr.data-testid]="'mesa-card-' + table.number">
+          <div class="table-header">
+            <div>
+              <span class="table-number">Mesa {{ table.number }}</span>
+              <span class="table-capacity">{{ table.capacity }} pers.</span>
+            </div>
+            <span class="badge badge-{{ table.status }}" data-testid="mesa-status">{{ table.status }}</span>
+          </div>
+
+          <div class="table-body">
+            @if (table.description) {
+              <p class="table-description">{{ table.description }}</p>
+            }
+
+            @if (table.status === 'reservada') {
+              <p class="table-reservation">
+                Reservada para: {{ table.reservedForEmail || 'sin dueño' }}
+              </p>
+            }
+
+            <label class="field-label" [for]="'status-' + table.id">Estado</label>
+            <select
+              class="status-select"
+              [id]="'status-' + table.id"
+              [value]="table.status"
+              (change)="onStatusChange(table, $any($event.target).value)"
+              data-testid="mesa-status-select"
+            >
+              @for (s of statuses; track s) {
+                <option [value]="s" [selected]="s === table.status">{{ s }}</option>
+              }
+            </select>
+
+            @if (reserving() === table.id) {
+              <div class="reservation-form">
+                <label class="field-label" [for]="'email-' + table.id">Email del cliente (opcional)</label>
+                <input
+                  type="email"
+                  class="reservation-input"
+                  [id]="'email-' + table.id"
+                  placeholder="cliente@ejemplo.com"
+                  [value]="reservationEmail()"
+                  (input)="onEmailInput($event)"
+                  data-testid="mesa-reservation-email"
+                />
+                <div class="reservation-actions">
+                  <button class="btn btn-sm btn-primary" (click)="confirmReservation(table)" data-testid="mesa-reservation-confirm">Reservar</button>
+                  <button class="btn btn-sm btn-secondary" (click)="cancelReservation()">Cancelar</button>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (table.status === 'ocupada') {
+            <div class="table-orders" data-testid="mesa-orders">
+              <h3>Pedidos activos</h3>
+              @for (order of ordersFor(table); track order.id) {
+                <div class="order-block" [attr.data-testid]="'mesa-order-' + order.id">
+                  <span class="order-id">Pedido #{{ order.id.substring(0, 8) }}</span>
+                  @for (item of order.items; track item.id) {
+                    <div class="order-item">
+                      <span>{{ item.quantity }}x {{ item.dishName || 'Producto' }}</span>
+                      <span class="badge badge-{{ item.status }}">{{ item.status }}</span>
+                    </div>
+                  }
+                  @if (order.total !== undefined) {
+                    <div class="order-total" data-testid="mesa-order-total">
+                      @if (order.discountCode) {
+                        <span class="order-discount">{{ order.discountCode }} (-{{ order.discountPercentage }}%)</span>
+                      }
+                      <strong>Total: {{ order.total | number:'1.2-2' }} €</strong>
+                    </div>
+                  }
+                </div>
+              } @empty {
+                <p class="no-orders">Sin pedidos activos</p>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+}

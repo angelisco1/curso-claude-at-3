@@ -31,6 +31,11 @@ export class ShellComponent {
     this.userRole() === 'camarero' || this.userRole() === 'manager'
   )
 
+  // La API solo deja cambiar el estado de las mesas a admin, manager y camarero
+  readonly canSeeMesas = computed(() =>
+    this.userRole() === 'camarero' || this.userRole() === 'manager'
+  )
+
   readonly defaultRoute = computed(() => {
     const role = this.userRole()
     if (role === 'cocinero') return '/cocina'

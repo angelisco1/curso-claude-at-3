@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from '@resttek/web-shared';
 import { ShellComponent } from './core/layout/shell.component';
 import { authGuard } from '@resttek/web-shared';
+import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   {
@@ -29,6 +30,11 @@ export const routes: Routes = [
       {
         path: 'salon',
         loadComponent: () => import('./features/orders/pages/salon/salon.component').then(m => m.SalonComponent),
+      },
+      {
+        path: 'mesas',
+        canActivate: [roleGuard(['camarero', 'manager'])],
+        loadComponent: () => import('./features/tables/pages/mesas/mesas.component').then(m => m.MesasComponent),
       }
     ]
   },

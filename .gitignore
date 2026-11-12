@@ -4,3 +4,7 @@ node_modules
 *.db-*
 dist
 .angular
+
+# E2E (Playwright)
+e2e/test-results/
+e2e/playwright-report/

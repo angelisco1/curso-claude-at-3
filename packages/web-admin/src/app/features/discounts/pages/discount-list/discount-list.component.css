@@ -1,0 +1,56 @@
+.subtitle {
+  margin: -8px 0 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.create-card {
+  margin-bottom: 20px;
+}
+
+.create-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.create-action {
+  padding-top: 24px;
+}
+
+.code-input {
+  text-transform: uppercase;
+}
+
+.field-error {
+  display: block;
+  margin-top: 6px;
+  color: var(--red-text);
+  font-size: 12px;
+}
+
+.form-alert {
+  margin: 12px 0 0;
+}
+
+.discount-code {
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+  color: var(--text-primary);
+}
+
+.status-active {
+  background: var(--green-glow);
+  color: var(--green-light);
+}
+
+@media (max-width: 700px) {
+  .create-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .create-action {
+    padding-top: 0;
+  }
+}

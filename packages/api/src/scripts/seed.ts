@@ -9,6 +9,19 @@ const seed = async () => {
         await dbConfig.initialize()
         console.log('Database initialized.')
 
+        // Los restaurantes van primero: los empleados tienen FK a restaurants
+        await dbConfig.run(`
+            INSERT OR IGNORE INTO restaurants (id, name, address, email, phone, owner_first_name, owner_last_name, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, ['rest-1', 'Restaurante El Gourmet', 'Calle Mayor 10, Madrid', 'info@gourmet.com', '912345678', 'Carlos', 'García', new Date().toISOString(), new Date().toISOString()])
+
+        await dbConfig.run(`
+            INSERT OR IGNORE INTO restaurants (id, name, address, email, phone, owner_first_name, owner_last_name, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, ['rest-2', 'Pizzería Napoli', 'Avenida del Sol 25, Barcelona', 'info@napoli.com', '934567890', 'Marco', 'Rossi', new Date().toISOString(), new Date().toISOString()])
+
+        console.log('Restaurants created.')
+
         const authService = new BcryptAuthService()
         const employeeRepo = new SqliteEmployeeRepository(dbConfig)
 
@@ -59,144 +72,134 @@ const seed = async () => {
             }
         }
 
-        await dbConfig.run(`
-            INSERT OR IGNORE INTO restaurants (id, name, address, email, phone, owner_first_name, owner_last_name, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, ['rest-1', 'Restaurante El Gourmet', 'Calle Mayor 10, Madrid', 'info@gourmet.com', '912345678', 'Carlos', 'García', new Date().toISOString(), new Date().toISOString()])
 
-        await dbConfig.run(`
-            INSERT OR IGNORE INTO restaurants (id, name, address, email, phone, owner_first_name, owner_last_name, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, ['rest-2', 'Pizzería Napoli', 'Avenida del Sol 25, Barcelona', 'info@napoli.com', '934567890', 'Marco', 'Rossi', new Date().toISOString(), new Date().toISOString()])
+        // Ingredientes y platos: ids fijos y, si ya existen por nombre en el restaurante
+        // (bases de datos sembradas con versiones anteriores), se reutiliza su id.
+        // Así el seed es idempotente y no duplica nada.
+        const now = () => new Date().toISOString()
 
-        console.log('Restaurants created.')
-
-        const ingredientsRest1 = [
-            { id: randomUUID(), name: 'Tomate', unit: 'kg' },
-            { id: randomUUID(), name: 'Queso mozzarella', unit: 'kg' },
-            { id: randomUUID(), name: 'Aceite de oliva', unit: 'L' },
-            { id: randomUUID(), name: 'Ajo', unit: 'kg' },
-            { id: randomUUID(), name: 'Albahaca', unit: 'kg' },
-        ]
-
-        for (const ing of ingredientsRest1) {
+        const ensureIngredient = async (id: string, name: string, unit: string, stock: number, restaurantId: string) => {
+            const existing = await dbConfig.get<{ id: string }>('SELECT id FROM ingredients WHERE name = ? AND restaurant_id = ?', [name, restaurantId])
+            if (existing) return existing.id
             await dbConfig.run(`
                 INSERT OR IGNORE INTO ingredients (id, name, unit, current_stock, restaurant_id, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            `, [ing.id, ing.name, ing.unit, 10, 'rest-1', new Date().toISOString(), new Date().toISOString()])
+            `, [id, name, unit, stock, restaurantId, now(), now()])
+            return id
         }
 
-        const dish1Id = randomUUID()
-        await dbConfig.run(`
-            INSERT OR IGNORE INTO dishes (id, name, description, price, category, restaurant_id, available, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [dish1Id, 'Pizza Margarita', 'Pizza clásica con tomate, mozzarella y albahaca', 12.50, 'principal', 'rest-1', 1, new Date().toISOString(), new Date().toISOString()])
+        const ensureDish = async (
+            id: string,
+            dish: { name: string, description: string, price: number, category: string, restaurantId: string },
+            ingredients: [ingredientId: string, quantity: number][] = [],
+        ) => {
+            const existing = await dbConfig.get<{ id: string }>('SELECT id FROM dishes WHERE name = ? AND restaurant_id = ?', [dish.name, dish.restaurantId])
+            const dishId = existing?.id ?? id
+            if (!existing) {
+                await dbConfig.run(`
+                    INSERT OR IGNORE INTO dishes (id, name, description, price, category, restaurant_id, available, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [dishId, dish.name, dish.description, dish.price, dish.category, dish.restaurantId, 1, now(), now()])
+            }
+            for (const [ingredientId, quantity] of ingredients) {
+                await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dishId, ingredientId, quantity])
+            }
+            return dishId
+        }
 
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dish1Id, ingredientsRest1[0].id, 0.3])
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dish1Id, ingredientsRest1[1].id, 0.4])
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dish1Id, ingredientsRest1[4].id, 0.05])
+        const tomate = await ensureIngredient('ing-rest-1-tomate', 'Tomate', 'kg', 10, 'rest-1')
+        const mozzarella = await ensureIngredient('ing-rest-1-mozzarella', 'Queso mozzarella', 'kg', 10, 'rest-1')
+        const aceite = await ensureIngredient('ing-rest-1-aceite', 'Aceite de oliva', 'L', 10, 'rest-1')
+        const ajo = await ensureIngredient('ing-rest-1-ajo', 'Ajo', 'kg', 10, 'rest-1')
+        const albahaca = await ensureIngredient('ing-rest-1-albahaca', 'Albahaca', 'kg', 10, 'rest-1')
 
-        const dish2Id = randomUUID()
-        await dbConfig.run(`
-            INSERT OR IGNORE INTO dishes (id, name, description, price, category, restaurant_id, available, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [dish2Id, 'Ensalada Caprese', 'Ensalada fresca con tomate, mozzarella y albahaca', 9.00, 'entrante', 'rest-1', 1, new Date().toISOString(), new Date().toISOString()])
-
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dish2Id, ingredientsRest1[0].id, 0.4])
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dish2Id, ingredientsRest1[1].id, 0.3])
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dish2Id, ingredientsRest1[4].id, 0.03])
-
-        const dish3Id = randomUUID()
-        await dbConfig.run(`
-            INSERT OR IGNORE INTO dishes (id, name, description, price, category, restaurant_id, available, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [dish3Id, 'Bruschetta', 'Pan tostado con tomate, ajo y aceite de oliva', 7.50, 'entrante', 'rest-1', 1, new Date().toISOString(), new Date().toISOString()])
-
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dish3Id, ingredientsRest1[0].id, 0.2])
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dish3Id, ingredientsRest1[2].id, 0.05])
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dish3Id, ingredientsRest1[3].id, 0.01])
-
-        await dbConfig.run(`
-            INSERT OR IGNORE INTO dishes (id, name, description, price, category, restaurant_id, available, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [randomUUID(), 'Refresco de Cola', 'Bebida refrescante', 2.50, 'bebida', 'rest-1', 1, new Date().toISOString(), new Date().toISOString()])
-
-        await dbConfig.run(`
-            INSERT OR IGNORE INTO dishes (id, name, description, price, category, restaurant_id, available, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [randomUUID(), 'Agua Mineral', 'Agua mineral natural', 2.00, 'bebida', 'rest-1', 1, new Date().toISOString(), new Date().toISOString()])
+        const dish1Id = await ensureDish('dish-rest-1-margarita',
+            { name: 'Pizza Margarita', description: 'Pizza clásica con tomate, mozzarella y albahaca', price: 12.50, category: 'principal', restaurantId: 'rest-1' },
+            [[tomate, 0.3], [mozzarella, 0.4], [albahaca, 0.05]])
+        const dish2Id = await ensureDish('dish-rest-1-caprese',
+            { name: 'Ensalada Caprese', description: 'Ensalada fresca con tomate, mozzarella y albahaca', price: 9.00, category: 'entrante', restaurantId: 'rest-1' },
+            [[tomate, 0.4], [mozzarella, 0.3], [albahaca, 0.03]])
+        const dish3Id = await ensureDish('dish-rest-1-bruschetta',
+            { name: 'Bruschetta', description: 'Pan tostado con tomate, ajo y aceite de oliva', price: 7.50, category: 'entrante', restaurantId: 'rest-1' },
+            [[tomate, 0.2], [aceite, 0.05], [ajo, 0.01]])
+        const drink1Id = await ensureDish('dish-rest-1-cola',
+            { name: 'Refresco de Cola', description: 'Bebida refrescante', price: 2.50, category: 'bebida', restaurantId: 'rest-1' })
+        const drink2Id = await ensureDish('dish-rest-1-agua',
+            { name: 'Agua Mineral', description: 'Agua mineral natural', price: 2.00, category: 'bebida', restaurantId: 'rest-1' })
 
         console.log('Restaurant 1 dishes created: 3 dishes + 2 drinks')
 
-        const ingredientsRest2 = [
-            { id: randomUUID(), name: 'Harina', unit: 'kg' },
-            { id: randomUUID(), name: 'Levadura', unit: 'kg' },
-            { id: randomUUID(), name: 'Tomate triturado', unit: 'kg' },
-        ]
+        const harina = await ensureIngredient('ing-rest-2-harina', 'Harina', 'kg', 15, 'rest-2')
+        const levadura = await ensureIngredient('ing-rest-2-levadura', 'Levadura', 'kg', 15, 'rest-2')
+        const tomateTriturado = await ensureIngredient('ing-rest-2-tomate-triturado', 'Tomate triturado', 'kg', 15, 'rest-2')
 
-        for (const ing of ingredientsRest2) {
-            await dbConfig.run(`
-                INSERT OR IGNORE INTO ingredients (id, name, unit, current_stock, restaurant_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `, [ing.id, ing.name, ing.unit, 15, 'rest-2', new Date().toISOString(), new Date().toISOString()])
-        }
-
-        const dishNapoliId = randomUUID()
-        await dbConfig.run(`
-            INSERT OR IGNORE INTO dishes (id, name, description, price, category, restaurant_id, available, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [dishNapoliId, 'Pizza Napolitana', 'Pizza al estilo napolitano con tomate y mozzarella', 14.00, 'principal', 'rest-2', 1, new Date().toISOString(), new Date().toISOString()])
-
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dishNapoliId, ingredientsRest2[0].id, 0.5])
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dishNapoliId, ingredientsRest2[1].id, 0.02])
-        await dbConfig.run(`INSERT OR IGNORE INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES (?, ?, ?)`, [dishNapoliId, ingredientsRest2[2].id, 0.3])
-
-        await dbConfig.run(`
-            INSERT OR IGNORE INTO dishes (id, name, description, price, category, restaurant_id, available, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [randomUUID(), 'Limonada Casera', 'Limonada recién hecha', 3.50, 'bebida', 'rest-2', 1, new Date().toISOString(), new Date().toISOString()])
+        await ensureDish('dish-rest-2-napolitana',
+            { name: 'Pizza Napolitana', description: 'Pizza al estilo napolitano con tomate y mozzarella', price: 14.00, category: 'principal', restaurantId: 'rest-2' },
+            [[harina, 0.5], [levadura, 0.02], [tomateTriturado, 0.3]])
+        await ensureDish('dish-rest-2-limonada',
+            { name: 'Limonada Casera', description: 'Limonada recién hecha', price: 3.50, category: 'bebida', restaurantId: 'rest-2' })
 
         console.log('Restaurant 2 dishes created: 1 dish + 1 drink')
 
-        const order1Id = randomUUID()
+        // Códigos de descuento globales (code es UNIQUE: INSERT OR IGNORE los hace idempotentes)
+        const discounts = [
+            { id: 'discount-1', code: 'DISCOUNT30', percentage: 30, active: 1 },
+            { id: 'discount-2', code: 'WELCOME10', percentage: 10, active: 1 },
+            { id: 'discount-3', code: 'BLACK_FRIDAY', percentage: 50, active: 0 },
+        ]
+        for (const discount of discounts) {
+            await dbConfig.run(`
+                INSERT OR IGNORE INTO discounts (id, code, percentage, active, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [discount.id, discount.code, discount.percentage, discount.active, new Date().toISOString(), new Date().toISOString()])
+        }
+
+        console.log('Discounts created: DISCOUNT30 (30%), WELCOME10 (10%), BLACK_FRIDAY (50%, inactivo)')
+
+        // Mesas de ejemplo con ids fijos (INSERT OR IGNORE las hace idempotentes)
+        const tables: { id: string, restaurantId: string, number: number, capacity: number, description: string | null, status?: string }[] = [
+            { id: 'table-rest-1-1', restaurantId: 'rest-1', number: 1, capacity: 2, description: 'Junto a la ventana' },
+            { id: 'table-rest-1-2', restaurantId: 'rest-1', number: 2, capacity: 2, description: null },
+            { id: 'table-rest-1-3', restaurantId: 'rest-1', number: 3, capacity: 4, description: 'Terraza' },
+            { id: 'table-rest-1-4', restaurantId: 'rest-1', number: 4, capacity: 4, description: null },
+            { id: 'table-rest-1-5', restaurantId: 'rest-1', number: 5, capacity: 6, description: 'Salón principal', status: 'ocupada' },
+            { id: 'table-rest-1-6', restaurantId: 'rest-1', number: 6, capacity: 6, description: null },
+            { id: 'table-rest-2-1', restaurantId: 'rest-2', number: 1, capacity: 2, description: null },
+            { id: 'table-rest-2-2', restaurantId: 'rest-2', number: 2, capacity: 4, description: 'Terraza' },
+            { id: 'table-rest-2-3', restaurantId: 'rest-2', number: 3, capacity: 4, description: null },
+            { id: 'table-rest-2-4', restaurantId: 'rest-2', number: 4, capacity: 6, description: 'Reservado para grupos' },
+        ]
+        for (const table of tables) {
+            await dbConfig.run(`
+                INSERT OR IGNORE INTO tables (id, restaurant_id, number, description, capacity, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [table.id, table.restaurantId, table.number, table.description, table.capacity, table.status ?? 'libre', new Date().toISOString(), new Date().toISOString()])
+        }
+
+        console.log('Tables created: 6 in rest-1 (table-rest-1-1..6) and 4 in rest-2 (table-rest-2-1..4)')
+
+        // Pedido de ejemplo en la mesa 5 de rest-1 (ocupada), con ids fijos
+        const order1Id = 'order-seed-1'
         await dbConfig.run(`
             INSERT OR IGNORE INTO orders (id, restaurant_id, table_id, client_id, created_at)
             VALUES (?, ?, ?, ?, ?)
-        `, [order1Id, 'rest-1', '5', null, new Date().toISOString()])
+        `, [order1Id, 'rest-1', 'table-rest-1-5', null, now()])
 
-        for (let i = 0; i < 2; i++) {
+        const orderItems: [dishId: string, quantity: number, notes: string | null, status: string][] = [
+            [dish1Id, 1, null, 'pendiente'],
+            [dish1Id, 1, null, 'pendiente'],
+            [dish2Id, 1, 'Sin cebolla', 'pendiente'],
+            [dish2Id, 1, 'Sin cebolla', 'pendiente'],
+            [dish2Id, 1, 'Sin cebolla', 'pendiente'],
+            [dish3Id, 1, null, 'preparando'],
+            [drink1Id, 1, null, 'pendiente'],
+            [drink2Id, 2, null, 'pendiente'],
+        ]
+        for (const [index, [dishId, quantity, notes, status]] of orderItems.entries()) {
             await dbConfig.run(`
                 INSERT OR IGNORE INTO order_items (id, order_id, dish_id, quantity, notes, status)
                 VALUES (?, ?, ?, ?, ?, ?)
-            `, [randomUUID(), order1Id, dish1Id, 1, null, 'pendiente'])
-        }
-
-        for (let i = 0; i < 3; i++) {
-            await dbConfig.run(`
-                INSERT OR IGNORE INTO order_items (id, order_id, dish_id, quantity, notes, status)
-                VALUES (?, ?, ?, ?, ?, ?)
-            `, [randomUUID(), order1Id, dish2Id, 1, 'Sin cebolla', 'pendiente'])
-        }
-
-        await dbConfig.run(`
-            INSERT OR IGNORE INTO order_items (id, order_id, dish_id, quantity, notes, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `, [randomUUID(), order1Id, dish3Id, 1, null, 'preparando'])
-
-        const drink1Id = (await dbConfig.get<{id: string}>('SELECT id FROM dishes WHERE name = ? AND restaurant_id = ?', ['Refresco de Cola', 'rest-1']))?.id
-        if (drink1Id) {
-            await dbConfig.run(`
-                INSERT OR IGNORE INTO order_items (id, order_id, dish_id, quantity, notes, status)
-                VALUES (?, ?, ?, ?, ?, ?)
-            `, [randomUUID(), order1Id, drink1Id, 1, null, 'pendiente'])
-        }
-
-        const drink2Id = (await dbConfig.get<{id: string}>('SELECT id FROM dishes WHERE name = ? AND restaurant_id = ?', ['Agua Mineral', 'rest-1']))?.id
-        if (drink2Id) {
-            await dbConfig.run(`
-                INSERT OR IGNORE INTO order_items (id, order_id, dish_id, quantity, notes, status)
-                VALUES (?, ?, ?, ?, ?, ?)
-            `, [randomUUID(), order1Id, drink2Id, 2, null, 'pendiente'])
+            `, [`${order1Id}-item-${index + 1}`, order1Id, dishId, quantity, notes, status])
         }
 
         console.log('Sample orders created')

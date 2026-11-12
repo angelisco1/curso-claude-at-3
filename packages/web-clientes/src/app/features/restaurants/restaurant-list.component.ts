@@ -26,7 +26,8 @@ import { Restaurant } from '../../core/models/restaurant.model'
       } @else {
         <div class="restaurant-grid">
           @for (restaurant of restaurants(); track restaurant.id) {
-            <a [routerLink]="['/restaurants', restaurant.id]" class="restaurant-card card">
+            <a [routerLink]="['/restaurants', restaurant.id, 'table']" class="restaurant-card card"
+               [attr.data-testid]="'restaurant-card-' + restaurant.id">
               <div class="restaurant-logo">
                 @if (restaurant.logoUrl) {
                   <img [src]="restaurant.logoUrl" [alt]="restaurant.name" />

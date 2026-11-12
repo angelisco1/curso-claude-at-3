@@ -1,0 +1,63 @@
+<div class="fade-in">
+  <div class="page-header">
+    <h1>Mesas</h1>
+    <a [routerLink]="['new']" class="btn btn-primary" data-testid="table-new-button">
+      <lucide-icon name="plus" [size]="16"></lucide-icon>
+      Nueva mesa
+    </a>
+  </div>
+
+  @if (deleteError()) {
+    <div class="alert-error" data-testid="table-delete-error">{{ deleteError() }}</div>
+  }
+
+  @if (store.loading()) {
+    <div class="spinner"></div>
+  } @else if (store.error()) {
+    <div class="alert-error">{{ store.error() }}</div>
+  } @else if (store.tables().length === 0) {
+    <div class="empty-state card" data-testid="tables-empty">
+      <lucide-icon name="table" [size]="40"></lucide-icon>
+      <p>No hay mesas para este restaurante</p>
+    </div>
+  } @else {
+    <div class="card table-container">
+      <table data-testid="tables-table">
+        <thead>
+          <tr>
+            <th>Número</th>
+            <th>Descripción</th>
+            <th>Capacidad</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of store.tables(); track t.id) {
+            <tr [attr.data-testid]="'table-row-' + t.number">
+              <td class="table-number" data-testid="table-row-number">{{ t.number }}</td>
+              <td>{{ t.description ?? '—' }}</td>
+              <td data-testid="table-row-capacity">{{ t.capacity }}</td>
+              <td>
+                <span [class]="statusClass(t.status)" data-testid="table-row-status">{{ statusLabels[t.status] }}</span>
+                @if (t.status === 'reservada' && t.reservedForEmail) {
+                  <div class="reserved-for">{{ t.reservedForEmail }}</div>
+                }
+              </td>
+              <td>
+                <div class="actions">
+                  <a [routerLink]="[t.id, 'edit']" class="btn btn-secondary btn-sm" data-testid="table-edit-button" aria-label="Editar mesa">
+                    <lucide-icon name="edit" [size]="14"></lucide-icon>
+                  </a>
+                  <button class="btn btn-danger btn-sm" (click)="onDelete(t)" data-testid="table-delete-button" aria-label="Borrar mesa">
+                    <lucide-icon name="trash-2" [size]="14"></lucide-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

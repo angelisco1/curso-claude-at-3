@@ -1,0 +1,89 @@
+<div class="fade-in">
+  <div class="page-header">
+    <h1>Códigos de descuento</h1>
+  </div>
+  <p class="subtitle">Los códigos son globales: valen para los pedidos de cualquier restaurante.</p>
+
+  <form [formGroup]="form" (ngSubmit)="onCreate()" class="card create-card" data-testid="discount-form" novalidate>
+    <div class="create-grid">
+      <div class="form-group">
+        <label for="discount-code">Código</label>
+        <input id="discount-code" type="text" class="form-control code-input" formControlName="code"
+          placeholder="BLACK_FRIDAY" maxlength="40" autocomplete="off" data-testid="discount-code-input" />
+        @if (form.controls.code.touched && form.controls.code.invalid) {
+          <small class="field-error">De 3 a 30 caracteres: letras, números, "_" o "-".</small>
+        }
+      </div>
+      <div class="form-group">
+        <label for="discount-percentage">Porcentaje (%)</label>
+        <input id="discount-percentage" type="number" class="form-control" formControlName="percentage"
+          min="1" max="100" step="1" placeholder="10" data-testid="discount-percentage-input" />
+        @if (form.controls.percentage.touched && form.controls.percentage.invalid) {
+          <small class="field-error">Entero entre 1 y 100.</small>
+        }
+      </div>
+      <div class="form-group create-action">
+        <button type="submit" class="btn btn-primary" [disabled]="saving()" data-testid="discount-create-button">
+          <lucide-icon name="plus" [size]="16"></lucide-icon>
+          @if (saving()) { Creando... } @else { Crear código }
+        </button>
+      </div>
+    </div>
+    @if (formError()) {
+      <div class="alert-error form-alert" role="alert" data-testid="discount-form-error">{{ formError() }}</div>
+    }
+  </form>
+
+  @if (actionError()) {
+    <div class="alert-error" role="alert" data-testid="discount-action-error">{{ actionError() }}</div>
+  }
+
+  @if (store.loading()) {
+    <div class="spinner"></div>
+  } @else if (store.error()) {
+    <div class="alert-error">{{ store.error() }}</div>
+  } @else if (store.discounts().length === 0) {
+    <div class="empty-state card" data-testid="discounts-empty">
+      <lucide-icon name="tag" [size]="40"></lucide-icon>
+      <p>No hay códigos de descuento</p>
+    </div>
+  } @else {
+    <div class="card table-container">
+      <table data-testid="discounts-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Porcentaje</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of store.discounts(); track d.id) {
+            <tr [attr.data-testid]="'discount-row-' + d.code">
+              <td class="discount-code" data-testid="discount-row-code">{{ d.code }}</td>
+              <td data-testid="discount-row-percentage">{{ d.percentage }}%</td>
+              <td>
+                <span class="badge" [class.status-active]="d.active" [class.badge-muted]="!d.active" data-testid="discount-row-status">
+                  {{ d.active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td>
+                <div class="actions">
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="onToggle(d)"
+                    [disabled]="busyId() === d.id" data-testid="discount-toggle-button">
+                    {{ d.active ? 'Desactivar' : 'Activar' }}
+                  </button>
+                  <button type="button" class="btn btn-danger btn-sm" (click)="onDelete(d)"
+                    [disabled]="busyId() === d.id" data-testid="discount-delete-button" aria-label="Borrar descuento">
+                    <lucide-icon name="trash-2" [size]="14"></lucide-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
