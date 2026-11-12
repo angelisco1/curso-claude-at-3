@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main, development]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-lint:
+    name: Build, tests y linters
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # ── Build ──────────────────────────────────────────────
+      # La API se ejecuta con tsx (sin build), así que se comprueba con tsc.
+      # TODO: src/scripts/seed.ts tiene 12 errores de tipos (noUncheckedIndexedAccess).
+      # Cuando se corrijan, quitar continue-on-error para que bloquee la PR.
+      - name: Build API (typecheck con tsc)
+        working-directory: packages/api
+        run: npx tsc --noEmit -p .
+        continue-on-error: true
+
+      - name: Build web-admin
+        run: npm run build -w @resttek/web-admin
+
+      - name: Build web-empleados
+        run: npm run build -w @resttek/web-empleados
+
+      - name: Build web-clientes
+        run: npm run build -w @resttek/web-clientes
+
+      # ── Tests ──────────────────────────────────────────────
+      - name: Tests API (vitest)
+        run: npm test
+
+      - name: Tests web-admin (vitest vía ng test)
+        run: npm test -w @resttek/web-admin
+
+      # ── Linters ────────────────────────────────────────────
+      # El proyecto no tiene eslint; solo hay prettier (.prettierrc en web-admin y web-clientes).
+      # TODO: el código existente aún no está formateado. Tras ejecutar
+      # `npx prettier --write` en cada paquete, quitar continue-on-error.
+      - name: Prettier web-admin
+        working-directory: packages/web-admin
+        run: npx prettier --check "src/**/*.{ts,html,css}"
+        continue-on-error: true
+
+      - name: Prettier web-clientes
+        working-directory: packages/web-clientes
+        run: npx prettier --check "src/**/*.{ts,html,css}"
+        continue-on-error: true
+
+  docs-review:
+    name: Claude revisa coherencia con docs y OpenAPI
+    # Solo en PRs del propio repo: las PRs desde forks no tienen acceso a los secretos.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft
+    needs: build-test-lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude revisa la PR contra docs/ y los OpenAPI
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            BASE: ${{ github.event.pull_request.base.ref }}
+
+            Revisa que los cambios de esta PR siguen en sintonía con la documentación del proyecto.
+
+            1. Obtén los cambios con `git diff origin/${{ github.event.pull_request.base.ref }}...HEAD` (y `gh pr diff` si lo necesitas).
+            2. Lee toda la documentación de la carpeta `docs/` (arquitectura, dominio, glosario, modelo de datos, etc.) y busca con `find . -iname "openapi*" -o -iname "swagger*"` (excluyendo `node_modules`) los documentos OpenAPI que existan en el proyecto, incluido `docs/api/openapi.yml` si está.
+            3. Comprueba si el código de la PR contradice o deja desactualizado algo de esa documentación, por ejemplo:
+               - arquitectura y convenciones (`docs/arquitectura/*`) frente a dónde y cómo se ha escrito el código;
+               - términos y reglas de negocio (`docs/dominio/glosario.md`) y el modelo de datos (`docs/dominio/modelo-datos.md`) frente a tablas, columnas, entidades o nombres cambiados;
+               - rutas, parámetros, cuerpos, validaciones, respuestas, códigos de estado, roles y autenticación de la API frente a los documentos OpenAPI.
+               Si el contrato OpenAPI no existe pero la PR cambia la API, no lo marques como error: menciónalo solo como aviso.
+            4. Si algo no cuadra, publica UN comentario en la PR con `gh pr comment ${{ github.event.pull_request.number }} --body "..."`. Redáctalo en español, con una lista de discrepancias donde cada una indique el fichero de la PR, el documento afectado y qué habría que actualizar. No inventes problemas: solo discrepancias que puedas justificar con el diff y el texto del documento.
+            5. Si todo está en sintonía, no comentes nada.
+
+            No modifiques ficheros ni hagas commits o pushes: solo comenta en la PR.
+          claude_args: '--allowedTools "Bash(git diff:*),Bash(git log:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(find:*),Read,Glob,Grep"'
