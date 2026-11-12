@@ -82,24 +82,24 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 
 ### API
 
-- [ ] 1. Añadir en `database.ts` la tabla `tables` (`id TEXT PK`, `restaurant_id TEXT NOT NULL FK`, `number INTEGER NOT NULL`, `description TEXT`, `capacity INTEGER NOT NULL`, `status TEXT NOT NULL DEFAULT 'libre'`, `created_at`, `updated_at`, `UNIQUE(restaurant_id, number)`).
-- [ ] 2. Añadir a `DomainErrors.ts` los errores de mesa listados en "Archivos afectados" y mapearlos en `errorHandler.ts` (404 para `TableNotFoundError`, 409 para los de conflicto).
-- [ ] 3. Test (rojo) de `normalizeTableStatus()`: acepta `libre`/`ocupada`/`reservada` con mayúsculas y espacios, y lanza `InvalidTableStatusError` con otro valor.
-- [ ] 4. Crear `table.model.ts` (interface `Table` + `normalizeTableStatus()`) hasta poner el test en verde.
-- [ ] 5. Crear `table.repository.ts` con la interface `TableRepository` y `SqliteTableRepository`: `findById`, `findByRestaurant` (ordenado por `number`), `save` (insert/update como `SqliteRestaurantRepository`) y `delete`.
-- [ ] 6. Añadir al repositorio `findAvailable(restaurantId, people)` (`status = 'libre' AND capacity >= ?`, ordenado por `capacity, number`), `updateStatus(id, status)` y `occupyIfAvailable(id, restaurantId, people)` con un único `UPDATE ... WHERE id = ? AND restaurant_id = ? AND status = 'libre' AND capacity >= ?` que devuelva si `changes === 1`.
-- [ ] 7. Test de integración `table.repository.test.ts` (SQLite `:memory:`): guardar/buscar, filtro de disponibles, ocupación correcta y segunda ocupación que devuelve `false`, y número duplicado en el mismo restaurante rechazado.
-- [ ] 8. Crear `MockTableRepository` en `repositories/mocks/`.
-- [ ] 9. Tests (rojo) de `TableService.create`/`update`: número entero ≥ 1, capacidad entera ≥ 1, descripción con trim (o `null`), estado por defecto `libre`, número duplicado → `DuplicatedTableNumberError`.
-- [ ] 10. Implementar `TableService.create`, `update`, `findByRestaurant` y `findById` (lanza `TableNotFoundError` si no existe o es de otro restaurante) hasta verde.
-- [ ] 11. Tests (rojo) + implementación de `TableService.delete`: borra la mesa; si está `ocupada` lanza `TableOccupiedError`.
-- [ ] 12. Tests (rojo) + implementación de `findAvailable(restaurantId, people)`: `people` entero ≥ 1 o `InvalidPeopleCountError`.
-- [ ] 13. Tests (rojo) + implementación de `occupy(restaurantId, tableId, people)` (lanza `TableNotAvailableError` si `occupyIfAvailable` devuelve `false`) y `updateStatus(restaurantId, tableId, status)` usando `normalizeTableStatus()`.
-- [ ] 14. Crear `TableController` (arrow functions, `next(error)`, `toJSON()` en camelCase) con `create`, `getAll`, `getById`, `update`, `delete`, `getAvailable` (query `people`), `occupy` (body `people`) y `updateStatus` (body `status`).
-- [ ] 15. Crear `table.routes.ts` (`Router({ mergeParams: true })`): `GET /available` y `POST /:id/occupy` → todos los roles autenticados; `GET /` y `GET /:id` → admin, manager, camarero, cocinero; `PATCH /:id/status` → admin, manager, camarero (sin cocinero, ver "Dudas resueltas"); `POST /`, `PUT /:id`, `DELETE /:id` → admin. Declarar `/available` antes de `/:id`.
-- [ ] 16. Montar las rutas en `app.ts` y comprobar a mano con `npm run dev:api` + `curl` (crear, listar disponibles, ocupar dos veces → 409).
-- [ ] 17. Añadir al `seed.ts` mesas de ejemplo (p. ej. 6 en `rest-1` y 4 en `rest-2`, capacidades 2/4/6, ids fijos para que `INSERT OR IGNORE` sea idempotente) y ejecutar `npm run seed`.
-- [ ] 18. Ejecutar `npm test` y dejar toda la suite en verde.
+- [x] 1. Añadir en `database.ts` la tabla `tables` (`id TEXT PK`, `restaurant_id TEXT NOT NULL FK`, `number INTEGER NOT NULL`, `description TEXT`, `capacity INTEGER NOT NULL`, `status TEXT NOT NULL DEFAULT 'libre'`, `created_at`, `updated_at`, `UNIQUE(restaurant_id, number)`).
+- [x] 2. Añadir a `DomainErrors.ts` los errores de mesa listados en "Archivos afectados" y mapearlos en `errorHandler.ts` (404 para `TableNotFoundError`, 409 para los de conflicto).
+- [x] 3. Test (rojo) de `normalizeTableStatus()`: acepta `libre`/`ocupada`/`reservada` con mayúsculas y espacios, y lanza `InvalidTableStatusError` con otro valor.
+- [x] 4. Crear `table.model.ts` (interface `Table` + `normalizeTableStatus()`) hasta poner el test en verde.
+- [x] 5. Crear `table.repository.ts` con la interface `TableRepository` y `SqliteTableRepository`: `findById`, `findByRestaurant` (ordenado por `number`), `save` (insert/update como `SqliteRestaurantRepository`) y `delete`.
+- [x] 6. Añadir al repositorio `findAvailable(restaurantId, people)` (`status = 'libre' AND capacity >= ?`, ordenado por `capacity, number`), `updateStatus(id, status)` y `occupyIfAvailable(id, restaurantId, people)` con un único `UPDATE ... WHERE id = ? AND restaurant_id = ? AND status = 'libre' AND capacity >= ?` que devuelva si `changes === 1`.
+- [x] 7. Test de integración `table.repository.test.ts` (SQLite `:memory:`): guardar/buscar, filtro de disponibles, ocupación correcta y segunda ocupación que devuelve `false`, y número duplicado en el mismo restaurante rechazado.
+- [x] 8. Crear `MockTableRepository` en `repositories/mocks/`.
+- [x] 9. Tests (rojo) de `TableService.create`/`update`: número entero ≥ 1, capacidad entera ≥ 1, descripción con trim (o `null`), estado por defecto `libre`, número duplicado → `DuplicatedTableNumberError`.
+- [x] 10. Implementar `TableService.create`, `update`, `findByRestaurant` y `findById` (lanza `TableNotFoundError` si no existe o es de otro restaurante) hasta verde.
+- [x] 11. Tests (rojo) + implementación de `TableService.delete`: borra la mesa; si está `ocupada` lanza `TableOccupiedError`.
+- [x] 12. Tests (rojo) + implementación de `findAvailable(restaurantId, people)`: `people` entero ≥ 1 o `InvalidPeopleCountError`.
+- [x] 13. Tests (rojo) + implementación de `occupy(restaurantId, tableId, people)` (lanza `TableNotAvailableError` si `occupyIfAvailable` devuelve `false`) y `updateStatus(restaurantId, tableId, status)` usando `normalizeTableStatus()`.
+- [x] 14. Crear `TableController` (arrow functions, `next(error)`, `toJSON()` en camelCase) con `create`, `getAll`, `getById`, `update`, `delete`, `getAvailable` (query `people`), `occupy` (body `people`) y `updateStatus` (body `status`).
+- [x] 15. Crear `table.routes.ts` (`Router({ mergeParams: true })`): `GET /available` y `POST /:id/occupy` → todos los roles autenticados; `GET /` y `GET /:id` → admin, manager, camarero, cocinero; `PATCH /:id/status` → admin, manager, camarero (sin cocinero, ver "Dudas resueltas"); `POST /`, `PUT /:id`, `DELETE /:id` → admin. Declarar `/available` antes de `/:id`.
+- [x] 16. Montar las rutas en `app.ts` y comprobar a mano con `npm run dev:api` + `curl` (crear, listar disponibles, ocupar dos veces → 409).
+- [x] 17. Añadir al `seed.ts` mesas de ejemplo (p. ej. 6 en `rest-1` y 4 en `rest-2`, capacidades 2/4/6, ids fijos para que `INSERT OR IGNORE` sea idempotente) y ejecutar `npm run seed`.
+- [x] 18. Ejecutar `npm test` y dejar toda la suite en verde.
 
 ### web-admin
 
@@ -131,7 +131,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 
 ### Documentación
 
-- [ ] 38. Actualizar `docs/dominio/modelo-datos.md` (tabla `tables`, diagrama ER, relación con `orders`) y `docs/dominio/glosario.md` (Mesa y Estados de Mesa).
+- [x] 38. Actualizar `docs/dominio/modelo-datos.md` (tabla `tables`, diagrama ER, relación con `orders`) y `docs/dominio/glosario.md` (Mesa y Estados de Mesa).
 
 ## Criterios de aceptación
 

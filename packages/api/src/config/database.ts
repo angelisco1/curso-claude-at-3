@@ -163,6 +163,20 @@ export class Database {
                 status TEXT NOT NULL,
                 FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
                 FOREIGN KEY(dish_id) REFERENCES dishes(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS tables (
+                id TEXT PRIMARY KEY,
+                restaurant_id TEXT NOT NULL,
+                number INTEGER NOT NULL,
+                description TEXT,
+                capacity INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'libre',
+                reserved_for TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(restaurant_id, number),
+                FOREIGN KEY(restaurant_id) REFERENCES restaurants(id)
             )
         `.split(';')
 

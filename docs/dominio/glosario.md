@@ -17,6 +17,8 @@ Terminología del dominio y conceptos técnicos utilizados en el proyecto Restte
 | **DishIngredient** | Relación entre un plato y un ingrediente, con la cantidad necesaria. |
 | **Order** | Pedido realizado por un cliente. Contiene ítems (platos) y está asociado a un restaurante. |
 | **OrderItem** | Línea de un pedido: un plato con cantidad, notas opcionales y estado. |
+| **Mesa (Table)** | Mesa de un restaurante. Tiene número (único en el restaurante), descripción opcional, capacidad (comensales máximos) y estado. El cliente elige una mesa libre antes de ver la carta y sus pedidos quedan asociados a ella (`tableId`). |
+| **Reserva** | Mesa en estado `reservada`. No tiene fecha: la fijan a mano admin, manager o camarero. Puede tener titular (`reservedFor`, id del usuario cliente) o ser anónima (sin titular). |
 
 Dos particularidades del modelo que conviene tener presentes:
 
@@ -43,6 +45,16 @@ El valor almacenado es `manager`; "gerente" es solo su traducción en la interfa
 | **preparando** | Ítem siendo preparado en cocina. | cocinero |
 | **listo** | Ítem preparado, listo para servir. | cocinero |
 | **entregado** | Ítem entregado al cliente. Desaparece de las vistas activas. | camarero |
+
+### Estados de Mesa
+
+| Estado | Descripción | Quién lo cambia |
+| --- | --- | --- |
+| **libre** | Mesa disponible. Cualquier usuario autenticado puede ocuparla si tiene capacidad suficiente. | — (estado inicial) / admin, manager, camarero |
+| **ocupada** | Mesa con comensales. No se puede borrar. Se libera a mano (no hay liberación automática al entregar o pagar). | cliente u otro usuario al ocuparla / admin, manager, camarero |
+| **reservada** | Mesa bloqueada. Si tiene titular (`reservedFor`), solo ese cliente puede verla como disponible y ocuparla; si no, nadie puede ocuparla desde la app. | admin, manager, camarero |
+
+Cualquier transición entre estados está permitida. Al salir de `reservada` (o al ocuparla) el titular de la reserva se borra. El rol `cocinero` puede ver las mesas pero no cambiar su estado.
 
 ### Categorías de Platos
 
@@ -89,17 +101,17 @@ Las tres capas aplican al contexto `employee`:
 | **Application** | Casos de uso. Orquesta la lógica de negocio. |
 | **Infrastructure** | Implementaciones concretas: BD, HTTP, servicios externos. |
 
-En `restaurant`, `dish`, `ingredient` y `order` la separación equivalente es por carpetas: `models/`, `repositories/`, `services/`, `controllers/` y `routes/`.
+En `restaurant`, `dish`, `ingredient`, `order` y `table` la separación equivalente es por carpetas: `models/`, `repositories/`, `services/`, `controllers/` y `routes/`.
 
 ### Patrones
 
 | Patrón | Descripción | Ejemplo en Resttek |
 | --- | --- | --- |
-| **Entity** | Objeto con identidad única y comportamiento propio. | `Employee` (la única). `Restaurant`, `Dish`, `Ingredient` y `Order` son `interface` planas |
+| **Entity** | Objeto con identidad única y comportamiento propio. | `Employee` (la única). `Restaurant`, `Dish`, `Ingredient`, `Order` y `Table` son `interface` planas |
 | **Value Object** | Objeto inmutable definido por su valor. | `Email`, `Role` |
 | **Repository** | Abstracción de persistencia. | `IEmployeeRepository`, `RestaurantRepository` |
 | **Use Case** | Acción de negocio específica, una clase con `execute()`. | `LoginUseCase`, `CreateEmployeeUseCase`, `RegisterClientUseCase` |
-| **Service** | Equivalente al caso de uso fuera de `employee`: una clase con varios métodos. | `RestaurantService`, `DishService`, `OrderService` |
+| **Service** | Equivalente al caso de uso fuera de `employee`: una clase con varios métodos. | `RestaurantService`, `DishService`, `OrderService`, `TableService` |
 | **DTO** | Objeto para transferir datos entre capas. | `CreateRestaurantDTO`, `LoginDTO` |
 | **Factory Method** | Método estático para crear instancias con validación. | `Employee.create()` |
 | **Store** | Servicio Angular que guarda estado con signals. | `AuthStore`, `DishStore`, `CartStore` |
