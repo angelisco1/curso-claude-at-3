@@ -123,7 +123,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 
 ### web-empleados
 
-- [ ] 33. Crear `features/tables/models/table.model.ts`, `services/table.service.ts` y `store/table.store.ts` (carga por restaurante del usuario y `updateStatus` con actualización optimista del signal).
+- [x] 33. Crear `features/tables/models/table.model.ts`, `services/table.service.ts` y `store/table.store.ts` (carga por restaurante del usuario y `updateStatus` con actualización optimista del signal).
 - [ ] 34. Crear `pages/mesas/mesas.component` con tarjetas por mesa (número, capacidad, estado en badge) y un selector para cambiar el estado.
 - [ ] 35. En las mesas ocupadas, mostrar los pedidos activos de `OrderStore.orders()` filtrados por `tableId`, con el estado de cada ítem; arrancar/parar el polling de pedidos y recargar mesas en el mismo intervalo.
 - [ ] 36. Añadir la ruta `mesas` en `app.routes.ts` y el enlace en `shell.component.html`.
