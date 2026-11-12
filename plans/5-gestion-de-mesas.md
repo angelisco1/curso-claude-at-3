@@ -97,7 +97,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 - [x] 13. Tests (rojo) + implementación de `occupy(restaurantId, tableId, people)` (lanza `TableNotAvailableError` si `occupyIfAvailable` devuelve `false`) y `updateStatus(restaurantId, tableId, status)` usando `normalizeTableStatus()`.
 - [x] 14. Crear `TableController` (arrow functions, `next(error)`, `toJSON()` en camelCase) con `create`, `getAll`, `getById`, `update`, `delete`, `getAvailable` (query `people`), `occupy` (body `people`) y `updateStatus` (body `status`).
 - [x] 15. Crear `table.routes.ts` (`Router({ mergeParams: true })`): `GET /available` y `POST /:id/occupy` → todos los roles autenticados; `GET /` y `GET /:id` → admin, manager, camarero, cocinero; `PATCH /:id/status` → admin, manager, camarero (sin cocinero, ver "Dudas resueltas"); `POST /`, `PUT /:id`, `DELETE /:id` → admin. Declarar `/available` antes de `/:id`.
-- [ ] 16. Montar las rutas en `app.ts` y comprobar a mano con `npm run dev:api` + `curl` (crear, listar disponibles, ocupar dos veces → 409).
+- [x] 16. Montar las rutas en `app.ts` y comprobar a mano con `npm run dev:api` + `curl` (crear, listar disponibles, ocupar dos veces → 409).
 - [ ] 17. Añadir al `seed.ts` mesas de ejemplo (p. ej. 6 en `rest-1` y 4 en `rest-2`, capacidades 2/4/6, ids fijos para que `INSERT OR IGNORE` sea idempotente) y ejecutar `npm run seed`.
 - [ ] 18. Ejecutar `npm test` y dejar toda la suite en verde.
 
