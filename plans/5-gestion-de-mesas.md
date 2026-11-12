@@ -99,7 +99,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 - [x] 15. Crear `table.routes.ts` (`Router({ mergeParams: true })`): `GET /available` y `POST /:id/occupy` → todos los roles autenticados; `GET /` y `GET /:id` → admin, manager, camarero, cocinero; `PATCH /:id/status` → admin, manager, camarero (sin cocinero, ver "Dudas resueltas"); `POST /`, `PUT /:id`, `DELETE /:id` → admin. Declarar `/available` antes de `/:id`.
 - [x] 16. Montar las rutas en `app.ts` y comprobar a mano con `npm run dev:api` + `curl` (crear, listar disponibles, ocupar dos veces → 409).
 - [x] 17. Añadir al `seed.ts` mesas de ejemplo (p. ej. 6 en `rest-1` y 4 en `rest-2`, capacidades 2/4/6, ids fijos para que `INSERT OR IGNORE` sea idempotente) y ejecutar `npm run seed`.
-- [ ] 18. Ejecutar `npm test` y dejar toda la suite en verde.
+- [x] 18. Ejecutar `npm test` y dejar toda la suite en verde.
 
 ### web-admin
 
