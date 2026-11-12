@@ -90,8 +90,8 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 - [x] 6. Añadir al repositorio `findAvailable(restaurantId, people)` (`status = 'libre' AND capacity >= ?`, ordenado por `capacity, number`), `updateStatus(id, status)` y `occupyIfAvailable(id, restaurantId, people)` con un único `UPDATE ... WHERE id = ? AND restaurant_id = ? AND status = 'libre' AND capacity >= ?` que devuelva si `changes === 1`.
 - [x] 7. Test de integración `table.repository.test.ts` (SQLite `:memory:`): guardar/buscar, filtro de disponibles, ocupación correcta y segunda ocupación que devuelve `false`, y número duplicado en el mismo restaurante rechazado.
 - [x] 8. Crear `MockTableRepository` en `repositories/mocks/`.
-- [ ] 9. Tests (rojo) de `TableService.create`/`update`: número entero ≥ 1, capacidad entera ≥ 1, descripción con trim (o `null`), estado por defecto `libre`, número duplicado → `DuplicatedTableNumberError`.
-- [ ] 10. Implementar `TableService.create`, `update`, `findByRestaurant` y `findById` (lanza `TableNotFoundError` si no existe o es de otro restaurante) hasta verde.
+- [x] 9. Tests (rojo) de `TableService.create`/`update`: número entero ≥ 1, capacidad entera ≥ 1, descripción con trim (o `null`), estado por defecto `libre`, número duplicado → `DuplicatedTableNumberError`.
+- [x] 10. Implementar `TableService.create`, `update`, `findByRestaurant` y `findById` (lanza `TableNotFoundError` si no existe o es de otro restaurante) hasta verde.
 - [ ] 11. Tests (rojo) + implementación de `TableService.delete`: borra la mesa; si está `ocupada` lanza `TableOccupiedError`.
 - [ ] 12. Tests (rojo) + implementación de `findAvailable(restaurantId, people)`: `people` entero ≥ 1 o `InvalidPeopleCountError`.
 - [ ] 13. Tests (rojo) + implementación de `occupy(restaurantId, tableId, people)` (lanza `TableNotAvailableError` si `occupyIfAvailable` devuelve `false`) y `updateStatus(restaurantId, tableId, status)` usando `normalizeTableStatus()`.
