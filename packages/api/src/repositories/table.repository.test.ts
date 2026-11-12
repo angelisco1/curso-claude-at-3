@@ -134,9 +134,9 @@ describe('SqliteTableRepository (Integration)', () => {
             expect(await repo.findById('t1')).toMatchObject({ status: 'ocupada', reservedFor: null })
         })
 
-        it.each([
-            ['reservada para otro', { status: 'reservada' as const, reservedFor: 'c2' }, 2, 'r1'],
-            ['reservada anónima', { status: 'reservada' as const, reservedFor: null }, 2, 'r1'],
+        it.each<[string, Partial<Table>, number, string]>([
+            ['reservada para otro', { status: 'reservada', reservedFor: 'c2' }, 2, 'r1'],
+            ['reservada anónima', { status: 'reservada', reservedFor: null }, 2, 'r1'],
             ['con capacidad insuficiente', {}, 5, 'r1'],
             ['de otro restaurante', {}, 2, 'r2']
         ])('no ocupa una mesa %s', async (_label, overrides, people, restaurantId) => {
