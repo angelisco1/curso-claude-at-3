@@ -131,7 +131,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 
 ### Documentación
 
-- [ ] 38. Actualizar `docs/dominio/modelo-datos.md` (tabla `tables`, diagrama ER, relación con `orders`) y `docs/dominio/glosario.md` (Mesa y Estados de Mesa).
+- [x] 38. Actualizar `docs/dominio/modelo-datos.md` (tabla `tables`, diagrama ER, relación con `orders`) y `docs/dominio/glosario.md` (Mesa y Estados de Mesa).
 
 ## Criterios de aceptación
 
