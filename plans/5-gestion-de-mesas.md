@@ -82,7 +82,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 
 ### API
 
-- [ ] 1. Añadir en `database.ts` la tabla `tables` (`id TEXT PK`, `restaurant_id TEXT NOT NULL FK`, `number INTEGER NOT NULL`, `description TEXT`, `capacity INTEGER NOT NULL`, `status TEXT NOT NULL DEFAULT 'libre'`, `created_at`, `updated_at`, `UNIQUE(restaurant_id, number)`).
+- [x] 1. Añadir en `database.ts` la tabla `tables` (`id TEXT PK`, `restaurant_id TEXT NOT NULL FK`, `number INTEGER NOT NULL`, `description TEXT`, `capacity INTEGER NOT NULL`, `status TEXT NOT NULL DEFAULT 'libre'`, `created_at`, `updated_at`, `UNIQUE(restaurant_id, number)`).
 - [ ] 2. Añadir a `DomainErrors.ts` los errores de mesa listados en "Archivos afectados" y mapearlos en `errorHandler.ts` (404 para `TableNotFoundError`, 409 para los de conflicto).
 - [ ] 3. Test (rojo) de `normalizeTableStatus()`: acepta `libre`/`ocupada`/`reservada` con mayúsculas y espacios, y lanza `InvalidTableStatusError` con otro valor.
 - [ ] 4. Crear `table.model.ts` (interface `Table` + `normalizeTableStatus()`) hasta poner el test en verde.
