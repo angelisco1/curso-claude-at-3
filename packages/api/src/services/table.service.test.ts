@@ -7,7 +7,8 @@ import {
     InvalidTableStatusError,
     DuplicatedTableNumberError,
     TableNotFoundError,
-    TableOccupiedError
+    TableOccupiedError,
+    InvalidPeopleCountError
 } from '@errors/DomainErrors.js'
 
 describe('TableService', () => {
@@ -187,6 +188,32 @@ describe('TableService', () => {
             await expect(service.delete('r1', 'no-existe')).rejects.toThrow(TableNotFoundError)
             await expect(service.delete('r2', created.id)).rejects.toThrow(TableNotFoundError)
             expect(await repo.findById(created.id)).not.toBeNull()
+        })
+    })
+
+    describe('findAvailable', () => {
+        beforeEach(async () => {
+            await service.create('r1', { number: 1, capacity: 2 })
+            await service.create('r1', { number: 2, capacity: 6 })
+            await service.create('r1', { number: 3, capacity: 4, status: 'ocupada' })
+            const mine = await service.create('r1', { number: 4, capacity: 4 })
+            await repo.updateStatus(mine.id, 'reservada', 'c1', mine.updatedAt)
+            const other = await service.create('r1', { number: 5, capacity: 4 })
+            await repo.updateStatus(other.id, 'reservada', 'c2', other.updatedAt)
+            await service.create('r2', { number: 1, capacity: 8 })
+        })
+
+        it('devuelve libres y reservadas para el usuario con capacidad suficiente', async () => {
+            const tables = await service.findAvailable('r1', 3, 'c1')
+            expect(tables.map(t => t.number)).toEqual([4, 2])
+        })
+
+        it('devuelve [] si no hay ninguna', async () => {
+            await expect(service.findAvailable('r1', 10, 'c1')).resolves.toEqual([])
+        })
+
+        it.each([0, -1, 1.5, NaN, '3', undefined, null])('lanza InvalidPeopleCountError con people = %j', async (people) => {
+            await expect(service.findAvailable('r1', people as number, 'c1')).rejects.toThrow(InvalidPeopleCountError)
         })
     })
 })
