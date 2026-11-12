@@ -117,7 +117,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 - [x] 27. Crear `features/tables/table-selection.component.ts`: input de nº de personas (≥ 1) → botón "Ver mesas" → lista de mesas disponibles seleccionables (estado vacío si no hay) → botón "Continuar" deshabilitado hasta elegir.
 - [x] 28. Al pulsar "Continuar": llamar a `occupy`; si va bien, `selectTable` y navegar a `/restaurants/:id`; si responde 409, mostrar "La mesa ya no está disponible" y recargar la lista.
 - [x] 29. Añadir la ruta `restaurants/:id/table` y cambiar el enlace de `restaurant-list.component.ts` a esa ruta.
-- [ ] 30. En `restaurant-menu.component.ts`, redirigir a la selección si no hay mesa para ese restaurante y mostrar "Mesa N" en la cabecera.
+- [x] 30. En `restaurant-menu.component.ts`, redirigir a la selección si no hay mesa para ese restaurante y mostrar "Mesa N" en la cabecera.
 - [ ] 31. Pasar `tableId` en `OrderService.createOrder` y en `CartComponent.confirmOrder`.
 - [ ] 32. `ng build` en `packages/web-clientes` y prueba manual del flujo completo con `cliente1@resttek.com` (el pedido creado tiene `tableId`).
 
