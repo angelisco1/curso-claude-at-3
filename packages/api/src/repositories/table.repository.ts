@@ -1,6 +1,7 @@
 import { Database } from '@config/database.js'
 import type { Table, TableStatusType } from '@models/table.model.js'
 import { normalizeTableStatus } from '@models/table.model.js'
+import { DuplicatedTableNumberError } from '@errors/DomainErrors.js'
 
 interface TableRow {
     id: string
@@ -44,6 +45,17 @@ export class SqliteTableRepository implements TableRepository {
     }
 
     async save(table: Table): Promise<void> {
+        try {
+            await this.upsert(table)
+        } catch (error) {
+            if (this.isDuplicatedNumberError(error)) {
+                throw new DuplicatedTableNumberError()
+            }
+            throw error
+        }
+    }
+
+    private async upsert(table: Table): Promise<void> {
         const existing = await this.findById(table.id)
         if (existing) {
             await this.db.run(
@@ -88,6 +100,11 @@ export class SqliteTableRepository implements TableRepository {
             [updatedAt, id, restaurantId, people, userId]
         )
         return result.changes === 1
+    }
+
+    private isDuplicatedNumberError(error: unknown): boolean {
+        const message = error instanceof Error ? error.message : ''
+        return message.includes('UNIQUE constraint failed: tables.restaurant_id, tables.number')
     }
 
     private mapToTable(row: TableRow): Table {

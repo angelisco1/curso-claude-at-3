@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import { SqliteTableRepository } from './table.repository.js'
 import { Database } from '@config/database.js'
 import type { Table } from '@models/table.model.js'
+import { DuplicatedTableNumberError } from '@errors/DomainErrors.js'
 
 const now = new Date().toISOString()
 
@@ -143,6 +144,39 @@ describe('SqliteTableRepository (Integration)', () => {
 
             expect(await repo.occupyIfAvailable('t1', restaurantId, people, 'c1', 'later')).toBe(false)
             expect(await repo.findById('t1')).toMatchObject({ status: overrides.status ?? 'libre', updatedAt: now })
+        })
+    })
+
+    describe('concurrencia e integridad', () => {
+        it('una segunda ocupación de la misma mesa devuelve false', async () => {
+            await repo.save(buildTable())
+
+            const results = await Promise.all([
+                repo.occupyIfAvailable('t1', 'r1', 2, 'c1', 'later'),
+                repo.occupyIfAvailable('t1', 'r1', 2, 'c2', 'later')
+            ])
+            expect(results.filter(Boolean)).toHaveLength(1)
+            expect(await repo.occupyIfAvailable('t1', 'r1', 2, 'c1', 'later')).toBe(false)
+        })
+
+        it('rechaza un número duplicado en el mismo restaurante con DuplicatedTableNumberError', async () => {
+            await repo.save(buildTable())
+
+            await expect(repo.save(buildTable({ id: 't2' }))).rejects.toThrow(DuplicatedTableNumberError)
+        })
+
+        it('rechaza actualizar una mesa al número de otra del mismo restaurante', async () => {
+            await repo.save(buildTable())
+            await repo.save(buildTable({ id: 't2', number: 2 }))
+
+            await expect(repo.save(buildTable({ id: 't2', number: 1 }))).rejects.toThrow(DuplicatedTableNumberError)
+        })
+
+        it('permite el mismo número en restaurantes distintos', async () => {
+            await repo.save(buildTable())
+            await repo.save(buildTable({ id: 't2', restaurantId: 'r2' }))
+
+            expect(await repo.findById('t2')).not.toBeNull()
         })
     })
 })
