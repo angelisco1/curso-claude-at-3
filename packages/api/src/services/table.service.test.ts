@@ -6,7 +6,8 @@ import {
     InvalidTableCapacityError,
     InvalidTableStatusError,
     DuplicatedTableNumberError,
-    TableNotFoundError
+    TableNotFoundError,
+    TableOccupiedError
 } from '@errors/DomainErrors.js'
 
 describe('TableService', () => {
@@ -165,6 +166,27 @@ describe('TableService', () => {
             const created = await service.create('r1', validInput)
             await expect(service.findById('r1', 'no-existe')).rejects.toThrow(TableNotFoundError)
             await expect(service.findById('r2', created.id)).rejects.toThrow(TableNotFoundError)
+        })
+    })
+
+    describe('delete', () => {
+        it.each(['libre', 'reservada'])('borra una mesa %s', async (status) => {
+            const created = await service.create('r1', { ...validInput, status })
+            await service.delete('r1', created.id)
+            expect(await repo.findById(created.id)).toBeNull()
+        })
+
+        it('lanza TableOccupiedError y no borra si la mesa está ocupada', async () => {
+            const created = await service.create('r1', { ...validInput, status: 'ocupada' })
+            await expect(service.delete('r1', created.id)).rejects.toThrow(TableOccupiedError)
+            expect(await repo.findById(created.id)).not.toBeNull()
+        })
+
+        it('lanza TableNotFoundError si no existe o es de otro restaurante', async () => {
+            const created = await service.create('r1', validInput)
+            await expect(service.delete('r1', 'no-existe')).rejects.toThrow(TableNotFoundError)
+            await expect(service.delete('r2', created.id)).rejects.toThrow(TableNotFoundError)
+            expect(await repo.findById(created.id)).not.toBeNull()
         })
     })
 })

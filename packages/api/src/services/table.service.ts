@@ -5,14 +5,15 @@ import type { TableRepository } from '@repositories/table.repository.js'
 import {
     InvalidTableNumberError,
     InvalidTableCapacityError,
-    TableNotFoundError
+    TableNotFoundError,
+    TableOccupiedError
 } from '@errors/DomainErrors.js'
 
 export interface CreateTableDTO {
     number: number
     capacity: number
-    description?: string | null
-    status?: string
+    description?: string | null | undefined
+    status?: string | undefined
 }
 
 export type UpdateTableDTO = CreateTableDTO
@@ -50,6 +51,14 @@ export class TableService {
 
         await this.tableRepository.save(updated)
         return updated
+    }
+
+    async delete(restaurantId: string, id: string): Promise<void> {
+        const existing = await this.findById(restaurantId, id)
+        if (existing.status === 'ocupada') {
+            throw new TableOccupiedError()
+        }
+        await this.tableRepository.delete(id)
     }
 
     async findByRestaurant(restaurantId: string): Promise<Table[]> {

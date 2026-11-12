@@ -92,7 +92,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 - [x] 8. Crear `MockTableRepository` en `repositories/mocks/`.
 - [x] 9. Tests (rojo) de `TableService.create`/`update`: número entero ≥ 1, capacidad entera ≥ 1, descripción con trim (o `null`), estado por defecto `libre`, número duplicado → `DuplicatedTableNumberError`.
 - [x] 10. Implementar `TableService.create`, `update`, `findByRestaurant` y `findById` (lanza `TableNotFoundError` si no existe o es de otro restaurante) hasta verde.
-- [ ] 11. Tests (rojo) + implementación de `TableService.delete`: borra la mesa; si está `ocupada` lanza `TableOccupiedError`.
+- [x] 11. Tests (rojo) + implementación de `TableService.delete`: borra la mesa; si está `ocupada` lanza `TableOccupiedError`.
 - [ ] 12. Tests (rojo) + implementación de `findAvailable(restaurantId, people)`: `people` entero ≥ 1 o `InvalidPeopleCountError`.
 - [ ] 13. Tests (rojo) + implementación de `occupy(restaurantId, tableId, people)` (lanza `TableNotAvailableError` si `occupyIfAvailable` devuelve `false`) y `updateStatus(restaurantId, tableId, status)` usando `normalizeTableStatus()`.
 - [ ] 14. Crear `TableController` (arrow functions, `next(error)`, `toJSON()` en camelCase) con `create`, `getAll`, `getById`, `update`, `delete`, `getAvailable` (query `people`), `occupy` (body `people`) y `updateStatus` (body `status`).
