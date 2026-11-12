@@ -110,7 +110,7 @@ export class TableController {
             restaurantId: table.restaurantId,
             number: table.number,
             description: table.description,
-            capacity: table.capacity,
+            num: table.capacity,
             status: table.status,
             reservedFor: table.reservedFor,
             createdAt: table.createdAt,
