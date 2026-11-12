@@ -87,3 +87,38 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
+
+.table-orders {
+  padding: 0 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+
+.table-order {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.order-id {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.order-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.no-orders {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
