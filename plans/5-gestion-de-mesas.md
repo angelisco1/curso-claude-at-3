@@ -112,7 +112,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 
 ### web-clientes
 
-- [ ] 25. Crear `core/models/table.model.ts` y `core/services/table.service.ts` (`getAvailable` y `occupy` devolviendo `Observable`).
+- [x] 25. Crear `core/models/table.model.ts` y `core/services/table.service.ts` (`getAvailable` y `occupy` devolviendo `Observable`).
 - [ ] 26. Ampliar `CartStore` con `_tableId`/`_tableNumber` (expuestas en solo lectura), `selectTable(restaurantId, table)` y limpieza en `clear()` y al cambiar de restaurante.
 - [ ] 27. Crear `features/tables/table-selection.component.ts`: input de nº de personas (≥ 1) → botón "Ver mesas" → lista de mesas disponibles seleccionables (estado vacío si no hay) → botón "Continuar" deshabilitado hasta elegir.
 - [ ] 28. Al pulsar "Continuar": llamar a `occupy`; si va bien, `selectTable` y navegar a `/restaurants/:id`; si responde 409, mostrar "La mesa ya no está disponible" y recargar la lista.
