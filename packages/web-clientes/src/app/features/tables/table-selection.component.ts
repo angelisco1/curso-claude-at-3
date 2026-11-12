@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
-import { ActivatedRoute, RouterLink } from '@angular/router'
+import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { RestaurantService } from '../../core/services/restaurant.service'
+import { CartStore } from '../../core/store/cart.store'
 import { TableService } from '../../core/services/table.service'
 import { Restaurant } from '../../core/models/restaurant.model'
 import { Table } from '../../core/models/table.model'
@@ -59,7 +60,8 @@ import { Table } from '../../core/models/table.model'
         }
 
         <div class="actions">
-          <button type="button" class="btn btn-primary" [disabled]="!selected() || occupying()">
+          <button type="button" class="btn btn-primary" [disabled]="!selected() || occupying()"
+                  (click)="continue()">
             Continuar
           </button>
         </div>
@@ -139,6 +141,8 @@ import { Table } from '../../core/models/table.model'
 })
 export class TableSelectionComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
+  private readonly router = inject(Router)
+  private readonly cartStore = inject(CartStore)
   private readonly restaurantService = inject(RestaurantService)
   private readonly tableService = inject(TableService)
 
@@ -172,10 +176,14 @@ export class TableSelectionComponent implements OnInit {
 
   search(): void {
     if (!this.isPeopleValid()) return
+    this.error.set(null)
+    this.loadTables()
+  }
+
+  private loadTables(): void {
     const people = this.people()
 
     this.loading.set(true)
-    this.error.set(null)
     this.selected.set(null)
 
     this.tableService.getAvailable(this.restaurantId, people).subscribe({
@@ -194,5 +202,32 @@ export class TableSelectionComponent implements OnInit {
 
   select(table: Table): void {
     this.selected.set(table)
+  }
+
+  continue(): void {
+    const table = this.selected()
+    if (!table || this.occupying()) return
+
+    this.occupying.set(true)
+    this.error.set(null)
+
+    this.tableService.occupy(this.restaurantId, table.id, this.people()).subscribe({
+      next: (occupied) => {
+        this.cartStore.selectTable(this.restaurantId, occupied)
+        this.occupying.set(false)
+        this.router.navigate(['/restaurants', this.restaurantId])
+      },
+      error: (err) => {
+        this.occupying.set(false)
+        if (err.status === 409 || err.status === 404) {
+          this.error.set('La mesa ya no está disponible')
+          this.loadTables()
+        } else if (err.status === 400) {
+          this.error.set(err.error?.message ?? 'Número de comensales no válido')
+        } else {
+          this.error.set('Error al ocupar la mesa. Inténtalo de nuevo.')
+        }
+      }
+    })
   }
 }
