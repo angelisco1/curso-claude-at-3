@@ -127,7 +127,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 - [x] 34. Crear `pages/mesas/mesas.component` con tarjetas por mesa (número, capacidad, estado en badge) y un selector para cambiar el estado.
 - [x] 35. En las mesas ocupadas, mostrar los pedidos activos de `OrderStore.orders()` filtrados por `tableId`, con el estado de cada ítem; arrancar/parar el polling de pedidos y recargar mesas en el mismo intervalo.
 - [x] 36. Añadir la ruta `mesas` en `app.routes.ts` y el enlace en `shell.component.html`.
-- [ ] 37. `ng build` en `packages/web-empleados` y prueba manual con `camarero1@resttek.com` (ver la mesa ocupada por el cliente, su pedido, y liberarla).
+- [x] 37. `ng build` en `packages/web-empleados` y prueba manual con `camarero1@resttek.com` (ver la mesa ocupada por el cliente, su pedido, y liberarla).
 
 ### Documentación
 
