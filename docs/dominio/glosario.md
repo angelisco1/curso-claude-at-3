@@ -17,6 +17,8 @@ Terminología del dominio y conceptos técnicos utilizados en el proyecto Restte
 | **DishIngredient** | Relación entre un plato y un ingrediente, con la cantidad necesaria. |
 | **Order** | Pedido realizado por un cliente. Contiene ítems (platos) y está asociado a un restaurante. |
 | **OrderItem** | Línea de un pedido: un plato con cantidad, notas opcionales y estado. |
+| **Table** (Mesa) | Mesa de un restaurante con número (único en el restaurante), descripción opcional, capacidad (nº máximo de comensales) y estado. El cliente indica cuántos comensales son, elige una mesa disponible y la ocupa; el pedido guarda su `tableId`. |
+| **Discount** | Código de descuento (p. ej. `DISCOUNT30`) con un porcentaje entero entre 1 y 100. Lo crea el `admin`, es global (vale en cualquier restaurante) y puede estar activo o desactivado. |
 
 Dos particularidades del modelo que conviene tener presentes:
 
@@ -44,6 +46,16 @@ El valor almacenado es `manager`; "gerente" es solo su traducción en la interfa
 | **listo** | Ítem preparado, listo para servir. | cocinero |
 | **entregado** | Ítem entregado al cliente. Desaparece de las vistas activas. | camarero |
 
+### Estados de Mesa
+
+| Estado | Descripción | Quién lo cambia |
+| --- | --- | --- |
+| **libre** | Mesa disponible para cualquier cliente con comensales ≤ capacidad. | — (estado inicial); admin, manager, camarero la liberan a mano |
+| **ocupada** | Mesa en uso. Si la ocupó un cliente con `occupy`, se guarda como ocupante (`occupiedBy`) y puede repetir la ocupación sin error. | cliente (`occupy`); admin, manager, camarero |
+| **reservada** | Mesa apartada, sin fecha ni hora. Puede tener un cliente dueño (`reservedFor`, indicado por email); solo ese cliente la ve disponible y puede ocuparla. | admin, manager, camarero |
+
+Las mesas no se liberan solas al entregar o pagar el pedido: la liberación es siempre manual. Los empleados de un restaurante (`manager`, `camarero`, `cocinero`) solo acceden a las mesas de su propio restaurante (middleware `authorizeRestaurant`).
+
 ### Categorías de Platos
 
 | Categoría | Descripción |
@@ -64,6 +76,17 @@ El valor almacenado es `manager`; "gerente" es solo su traducción en la interfa
 | **unidad** | Unidades sueltas |
 
 Son los únicos valores que acepta `normalizeIngredientUnit()`. La entrada se normaliza con `trim()` + `toLowerCase()`, así que `KG` es válido, pero abreviaturas como `ud` o `L.` se rechazan con `InvalidUnitError`.
+
+### Descuentos
+
+| Término | Definición |
+| --- | --- |
+| **Código de descuento** | Texto elegido por el admin. `normalizeDiscountCode()` aplica `trim()` + `toUpperCase()` (al revés que el resto de normalizaciones, que pasan a minúsculas) y exige `^[A-Z0-9_-]{3,30}$`; si no, `InvalidDiscountCodeError`. Es único. |
+| **Descuento aplicado** | Copia del código y del porcentaje que guarda el pedido (`discountCode`, `discountPercentage`). Un pedido admite uno solo. |
+| **Subtotal** | Suma de `dishPrice × quantity` de los ítems del pedido. |
+| **Importe descontado** (`discountAmount`) | `subtotal × porcentaje / 100`, redondeado a 2 decimales. |
+| **Total** | `subtotal − discountAmount`. |
+| **Importes fijados** | Con descuento, `subtotal`, `discountAmount` y `total` se calculan al aplicar el código y se guardan en el pedido: no cambian aunque cambie el precio de un plato. Sin descuento, se calculan al leer con los precios actuales. |
 
 ---
 

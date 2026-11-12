@@ -1,6 +1,6 @@
 import { Database } from '@config/database.js'
-import type { Order, OrderItem } from '@models/order.model.js'
-import { normalizeOrderStatus } from '@models/order.model.js'
+import type { Order, OrderItem, OrderDiscountSnapshot } from '@models/order.model.js'
+import { normalizeOrderStatus, withOrderTotals } from '@models/order.model.js'
 
 interface OrderRow {
     id: string
@@ -8,6 +8,11 @@ interface OrderRow {
     table_id: string | null
     client_id: string | null
     created_at: string
+    discount_code: string | null
+    discount_percentage: number | null
+    subtotal: number | null
+    discount_amount: number | null
+    total: number | null
 }
 
 interface OrderRowWithRestaurant extends OrderRow {
@@ -34,6 +39,7 @@ export interface OrderRepository {
     create(order: Order): Promise<void>
     findById(id: string): Promise<Order | null>
     updateItemStatus(orderId: string, itemId: string, status: string): Promise<void>
+    updateDiscount(orderId: string, discount: OrderDiscountSnapshot | null): Promise<void>
     findActiveByRestaurant(restaurantId: string): Promise<Order[]>
     findByClientId(clientId: string): Promise<Order[]>
 }
@@ -43,8 +49,8 @@ export class SqliteOrderRepository implements OrderRepository {
 
     async create(order: Order): Promise<void> {
         await this.db.run(
-            'INSERT INTO orders (id, restaurant_id, table_id, client_id, created_at) VALUES (?, ?, ?, ?, ?)',
-            [order.id, order.restaurantId, order.tableId, order.clientId, order.createdAt.toISOString()]
+            'INSERT INTO orders (id, restaurant_id, table_id, client_id, created_at, discount_code, discount_percentage) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [order.id, order.restaurantId, order.tableId, order.clientId, order.createdAt.toISOString(), order.discountCode, order.discountPercentage]
         )
 
         for (const item of order.items) {
@@ -67,16 +73,25 @@ export class SqliteOrderRepository implements OrderRepository {
 
         const items = await this.getOrderItems(id)
 
-        return {
-            id: orderRow.id,
-            restaurantId: orderRow.restaurant_id,
-            tableId: orderRow.table_id,
-            clientId: orderRow.client_id,
-            createdAt: new Date(orderRow.created_at),
-            items,
+        return withOrderTotals({
+            ...this.mapToOrder(orderRow, items),
             restaurantName: orderRow.restaurant_name,
             restaurantLogoUrl: orderRow.restaurant_logo_url
-        }
+        })
+    }
+
+    async updateDiscount(orderId: string, discount: OrderDiscountSnapshot | null): Promise<void> {
+        await this.db.run(
+            'UPDATE orders SET discount_code = ?, discount_percentage = ?, subtotal = ?, discount_amount = ?, total = ? WHERE id = ?',
+            [
+                discount?.code ?? null,
+                discount?.percentage ?? null,
+                discount?.subtotal ?? null,
+                discount?.discountAmount ?? null,
+                discount?.total ?? null,
+                orderId
+            ]
+        )
     }
 
     async updateItemStatus(orderId: string, itemId: string, status: string): Promise<void> {
@@ -99,14 +114,7 @@ export class SqliteOrderRepository implements OrderRepository {
         const orders: Order[] = []
         for (const row of orderRows) {
             const items = await this.getOrderItems(row.id)
-            orders.push({
-                id: row.id,
-                restaurantId: row.restaurant_id,
-                tableId: row.table_id,
-                clientId: row.client_id,
-                createdAt: new Date(row.created_at),
-                items
-            })
+            orders.push(withOrderTotals(this.mapToOrder(row, items)))
         }
 
         return orders
@@ -125,19 +133,34 @@ export class SqliteOrderRepository implements OrderRepository {
         const orders: Order[] = []
         for (const row of orderRows) {
             const items = await this.getOrderItems(row.id)
-            orders.push({
-                id: row.id,
-                restaurantId: row.restaurant_id,
-                tableId: row.table_id,
-                clientId: row.client_id,
-                createdAt: new Date(row.created_at),
-                items,
+            orders.push(withOrderTotals({
+                ...this.mapToOrder(row, items),
                 restaurantName: row.restaurant_name,
                 restaurantLogoUrl: row.restaurant_logo_url
-            })
+            }))
         }
 
         return orders
+    }
+
+    private mapToOrder(row: OrderRow, items: OrderItem[]): Order {
+        const order: Order = {
+            id: row.id,
+            restaurantId: row.restaurant_id,
+            tableId: row.table_id,
+            clientId: row.client_id,
+            createdAt: new Date(row.created_at),
+            discountCode: row.discount_code,
+            discountPercentage: row.discount_percentage,
+            items
+        }
+        // Importes fijados al aplicar el descuento; sin ellos, withOrderTotals() los calcula
+        if (row.subtotal !== null && row.discount_amount !== null && row.total !== null) {
+            order.subtotal = row.subtotal
+            order.discountAmount = row.discount_amount
+            order.total = row.total
+        }
+        return order
     }
 
     private async getOrderItems(orderId: string): Promise<OrderItem[]> {

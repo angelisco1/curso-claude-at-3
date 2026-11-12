@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
-import { ActivatedRoute, RouterLink } from '@angular/router'
+import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { DecimalPipe } from '@angular/common'
 import { LucideAngularModule } from 'lucide-angular'
 import { DishService } from '../../core/services/dish.service'
@@ -17,6 +17,12 @@ import { Restaurant } from '../../core/models/restaurant.model'
         <div>
           <a routerLink="/restaurants" class="back-link">← Volver a restaurantes</a>
           <h1>{{ restaurant()?.name || 'Cargando...' }}</h1>
+          @if (cartStore.tableNumber() !== null) {
+            <p class="table-info">
+              <span class="badge" data-testid="menu-table-number">Mesa {{ cartStore.tableNumber() }}</span>
+              <a [routerLink]="['/restaurants', restaurantId, 'table']" class="change-table" data-testid="change-table-link">Cambiar mesa</a>
+            </p>
+          }
         </div>
       </div>
 
@@ -32,7 +38,7 @@ import { Restaurant } from '../../core/models/restaurant.model'
                 <h2 class="category-title">{{ category }}</h2>
                 <div class="dishes-grid">
                   @for (dish of getDishesByCategory(category); track dish.id) {
-                    <div class="dish-card card">
+                    <div class="dish-card card" [attr.data-testid]="'dish-card-' + dish.id">
                       <div class="dish-info">
                         <h3>{{ dish.name }}</h3>
                         @if (dish.description) {
@@ -46,7 +52,7 @@ import { Restaurant } from '../../core/models/restaurant.model'
                           <span>{{ getQuantity(dish.id) }}</span>
                           <button class="qty-btn" (click)="incrementQuantity(dish)">+</button>
                         </div>
-                        <button class="btn btn-primary btn-sm" (click)="addToCart(dish)">
+                        <button class="btn btn-primary btn-sm" (click)="addToCart(dish)" data-testid="add-to-cart-button">
                           Añadir
                         </button>
                       </div>
@@ -74,7 +80,7 @@ import { Restaurant } from '../../core/models/restaurant.model'
                 <span>Total:</span>
                 <strong>{{ cartStore.total() | number:'1.2-2' }} €</strong>
               </div>
-              <a routerLink="/cart" class="btn btn-primary" style="width: 100%; justify-content: center;">
+              <a routerLink="/cart" class="btn btn-primary" style="width: 100%; justify-content: center;" data-testid="view-cart-link">
                 Ver carrito ({{ cartStore.itemCount() }})
               </a>
             }
@@ -93,6 +99,16 @@ import { Restaurant } from '../../core/models/restaurant.model'
       color: var(--text-muted);
       margin-bottom: 8px;
       display: inline-block;
+    }
+    .table-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .change-table {
+      font-size: 13px;
+      color: var(--text-muted);
     }
     .menu-layout {
       display: grid;
@@ -209,6 +225,7 @@ import { Restaurant } from '../../core/models/restaurant.model'
 })
 export class RestaurantMenuComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
+  private readonly router = inject(Router)
   private readonly dishService = inject(DishService)
   private readonly restaurantService = inject(RestaurantService)
   readonly cartStore = inject(CartStore)
@@ -218,6 +235,7 @@ export class RestaurantMenuComponent implements OnInit {
   readonly loading = signal(true)
   readonly error = signal<string | null>(null)
   private quantities = signal<Record<string, number>>({})
+  restaurantId = ''
 
   readonly categories = computed(() => {
     const cats = [...new Set(this.dishes().map(d => d.category))]
@@ -234,6 +252,12 @@ export class RestaurantMenuComponent implements OnInit {
 
   ngOnInit(): void {
     const restaurantId = this.route.snapshot.paramMap.get('id')!
+    this.restaurantId = restaurantId
+    // Sin mesa elegida en este restaurante no se puede ver la carta: primero se elige mesa
+    if (!this.cartStore.hasTableFor(restaurantId)) {
+      this.router.navigate(['/restaurants', restaurantId, 'table'], { replaceUrl: true })
+      return
+    }
     this.loadData(restaurantId)
   }
 

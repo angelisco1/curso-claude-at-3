@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import type { OrderService } from '@services/order.service.js'
 
 export class OrderController {
@@ -81,6 +81,25 @@ export class OrderController {
             } else {
                 res.status(500).json({ error: 'Internal Server Error' })
             }
+        }
+    }
+
+    // A diferencia del resto de handlers de pedidos, los de descuento delegan en el errorHandler
+    async applyDiscount(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const order = await this.orderService.applyDiscount(req.params.id as string, req.body?.code, (req as any).user)
+            res.status(200).json(order)
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async removeDiscount(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            await this.orderService.removeDiscount(req.params.id as string, (req as any).user)
+            res.status(204).send()
+        } catch (error) {
+            next(error)
         }
     }
 }

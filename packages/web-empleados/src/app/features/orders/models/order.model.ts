@@ -17,6 +17,11 @@ export interface Order {
   tableId: string | null
   clientId: string | null
   createdAt: string
+  discountCode?: string | null
+  discountPercentage?: number | null
+  subtotal?: number
+  discountAmount?: number
+  total?: number
   items: OrderItem[]
 }
 

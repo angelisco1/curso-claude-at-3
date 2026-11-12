@@ -51,7 +51,7 @@ contexts/employee/
 
 `contexts/shared/` no es un bounded context de negocio: contiene el value object `Email` y los middlewares y el `errorHandler` de Express.
 
-### 2. Por capas → `restaurant`, `dish`, `ingredient`, `order`
+### 2. Por capas → `restaurant`, `dish`, `ingredient`, `order`, `discount`
 
 El resto de dominios **no** usan bounded contexts. Se organizan en carpetas transversales por tipo de fichero:
 
@@ -123,6 +123,7 @@ Los demás conceptos que podrían ser Value Objects **no están implementados co
 | Categoría de plato | `normalizeDishCategory()` en `models/dish.model.ts` | entrante, principal, postre, bebida |
 | Estado de pedido | `normalizeOrderStatus()` en `models/order.model.ts` | pendiente, preparando, listo, entregado |
 | Teléfono | `PHONE_REGEX` dentro de `services/restaurant.service.ts` | `/^\+?[\d\s\-()]{7,20}$/` |
+| Código de descuento | `normalizeDiscountCode()` en `models/discount.model.ts` | `^[A-Z0-9_-]{3,30}$` (tras `trim()` + `toUpperCase()`) |
 
 Las funciones `normalizeX()` hacen `trim()` + `toLowerCase()` y lanzan el error de dominio correspondiente si el valor no es válido.
 
@@ -319,12 +320,26 @@ Los ingredientes son **más restrictivos** que los platos: solo `admin` puede cr
 | `GET` | `/api/v1/orders/mine` | autenticado — pedidos del usuario del JWT |
 | `GET` | `/api/v1/orders/:id` | autenticado |
 | `PATCH` | `/api/v1/orders/:orderId/items/:itemId/status` | autenticado — devuelve 204 sin cuerpo |
+| `PUT` | `/api/v1/orders/:id/discount` | autenticado — aplica un código (`{ code }`); un `cliente` solo a sus pedidos |
+| `DELETE` | `/api/v1/orders/:id/discount` | autenticado — quita el descuento, 204; un `cliente` solo de sus pedidos |
 
 Ninguna ruta de pedidos aplica `authorize()`: cualquier usuario autenticado puede cambiar el estado de cualquier ítem.
+
+Los dos endpoints de descuento de un pedido son los únicos de pedidos que delegan en el `errorHandler` (`next(error)`), por lo que responden `{ error, message }`. Un pedido admite un solo descuento: aplicar otro código distinto da `409 OrderDiscountAlreadyAppliedError`; el mismo código es idempotente.
 
 `GET /orders/active` devuelve los pedidos del restaurante que tengan **al menos un ítem** en estado distinto de `entregado`.
 
 Al crear un pedido, el servicio **expande las cantidades**: un ítem con `quantity: 3` se guarda como 3 filas de `order_items` con `quantity: 1` cada una, para poder seguir el estado de cada unidad por separado.
+
+### Descuentos
+
+| Método | Ruta | Roles |
+| --- | --- | --- |
+| `POST` | `/api/v1/discounts` | admin — 201 con cabecera `Location` |
+| `GET` | `/api/v1/discounts` | admin — acepta `?active=true\|false` |
+| `GET` | `/api/v1/discounts/:id` | admin |
+| `PATCH` | `/api/v1/discounts/:id` | admin — solo `percentage` y `active` (el código es inmutable) |
+| `DELETE` | `/api/v1/discounts/:id` | admin — 204 |
 
 ---
 
@@ -345,15 +360,16 @@ Ambos responden directamente, sin pasar por el `errorHandler`.
 
 Jerarquía: `Error` → `AppError` (abstracta) → errores específicos en `errors/DomainErrors.ts`. `AppError` asigna `this.name = this.constructor.name`, y el `errorHandler` decide el código HTTP a partir de ese nombre:
 
-- **404**: `EmployeeNotFoundError`, `RestaurantNotFoundError`, `IngredientNotFoundError`, `DishNotFoundError`
+- **404**: `EmployeeNotFoundError`, `RestaurantNotFoundError`, `IngredientNotFoundError`, `DishNotFoundError`, `OrderNotFoundError`, `DiscountNotFoundError`
 - **401**: `InvalidCredentialsError`
+- **403**: `OrderAccessDeniedError`
+- **409**: `DuplicatedDiscountCodeError`, `DiscountInactiveError`, `OrderDiscountAlreadyAppliedError`
 - **400**: cualquier otro `AppError`
 - **500**: errores no controlados
 
 Dos excepciones que conviene conocer:
 
-- `OrderNotFoundError` **no** está en la lista de 404. Si llegase al `errorHandler` se traduciría a 400.
-- `OrderController` no delega en el `errorHandler`: es el único controlador que **no llama a `next(error)`**, sino que hace su propio `try/catch` y construye la respuesta a mano. Por eso `GET /orders/:id` sí devuelve 404, pero el `PATCH` de estado devuelve 400 para el mismo error.
+- `OrderController` no delega en el `errorHandler` salvo en los endpoints de descuento: el resto de sus handlers **no llaman a `next(error)`**, sino que hacen su propio `try/catch` y construyen la respuesta a mano. Por eso `GET /orders/:id` devuelve 404 con `{ error }`, el `PATCH` de estado devuelve 400 para el mismo error, y `PUT /orders/:id/discount` devuelve 404 con `{ error, message }` (vía `errorHandler`).
 
 ---
 
@@ -382,7 +398,7 @@ Los imports llevan extensión `.js` (`import { dbConfig } from '@config/database
 
 La clase `Database` (`config/database.ts`) encapsula `sqlite3` con una API basada en promesas:
 
-- `initialize()`: abre la conexión y ejecuta `runInitialMigrations()` (`CREATE TABLE IF NOT EXISTS`)
+- `initialize()`: abre la conexión y ejecuta `runInitialMigrations()` (`CREATE TABLE IF NOT EXISTS` y, para columnas nuevas en tablas ya existentes, `addColumnIfMissing()` con `ALTER TABLE ADD COLUMN`)
 - `run()`: INSERT/UPDATE/DELETE
 - `all<T>()`: SELECT de múltiples filas
 - `get<T>()`: SELECT de una fila
@@ -400,6 +416,5 @@ La ruta del fichero se decide en el constructor: `:memory:` si `NODE_ENV=test`, 
 Con **Vitest** (`npm test` desde la raíz, o `npm run test:watch` dentro de `packages/api`). Los tests son unitarios y conviven con el código que prueban:
 
 - Dominio y casos de uso de `employee`, con dobles en `contexts/employee/application/mocks/`
-- Servicios y repositorios de `restaurant`, `ingredient` y `order`, con dobles en `repositories/mocks/`
-
-**No hay tests de integración HTTP.** `supertest` figura como dependencia de desarrollo pero no se usa en ningún test, así que las rutas, los middlewares y el `errorHandler` no están cubiertos.
+- Servicios y repositorios de `restaurant`, `ingredient`, `order` y `discount`, con dobles en `repositories/mocks/`
+- Tests HTTP con `supertest` (contra `app` y SQLite `:memory:`) para las rutas de descuentos (`routes/discount.routes.test.ts`) y los de descuento de pedidos (`routes/order.routes.test.ts`). El resto de rutas no tienen tests HTTP.

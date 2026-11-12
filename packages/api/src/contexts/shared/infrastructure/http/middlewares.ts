@@ -39,3 +39,22 @@ export const authorize = (roles: string[]) => {
         next()
     }
 }
+
+const RESTAURANT_SCOPED_ROLES = ['manager', 'camarero', 'cocinero']
+
+/**
+ * Restringe a los empleados (manager, camarero, cocinero) al restaurante de su token.
+ * Admin y cliente no quedan restringidos. Debe ir después de `authenticate`.
+ */
+export const authorizeRestaurant = (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+        res.status(403).json({ error: 'Forbidden: Insufficient permissions' })
+        return
+    }
+    if (RESTAURANT_SCOPED_ROLES.includes(req.user.role) &&
+        (!req.user.restaurantId || req.user.restaurantId !== req.params.restaurantId)) {
+        res.status(403).json({ error: 'Forbidden: Restaurant access denied' })
+        return
+    }
+    next()
+}

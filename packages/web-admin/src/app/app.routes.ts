@@ -17,6 +17,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
       {
+        path: 'discounts',
+        loadChildren: () => import('./features/discounts/discounts.routes').then(m => m.DISCOUNT_ROUTES)
+      },
+      {
         path: 'restaurants',
         loadChildren: () => import('./features/restaurants/restaurants.routes').then(m => m.RESTAURANT_ROUTES)
       },
@@ -39,6 +43,10 @@ export const routes: Routes = [
           {
             path: 'employees',
             loadChildren: () => import('./features/employees/employees.routes').then(m => m.EMPLOYEE_ROUTES)
+          },
+          {
+            path: 'tables',
+            loadChildren: () => import('./features/tables/tables.routes').then(m => m.TABLE_ROUTES)
           }
         ]
       }

@@ -151,6 +151,11 @@ export class Database {
                 table_id TEXT,
                 client_id TEXT,
                 created_at TEXT NOT NULL,
+                discount_code TEXT,
+                discount_percentage INTEGER,
+                subtotal REAL,
+                discount_amount REAL,
+                total REAL,
                 FOREIGN KEY(restaurant_id) REFERENCES restaurants(id)
             );
 
@@ -163,11 +168,52 @@ export class Database {
                 status TEXT NOT NULL,
                 FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
                 FOREIGN KEY(dish_id) REFERENCES dishes(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS discounts (
+                id TEXT PRIMARY KEY,
+                code TEXT NOT NULL UNIQUE,
+                percentage INTEGER NOT NULL CHECK (percentage BETWEEN 1 AND 100),
+                active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS tables (
+                id TEXT PRIMARY KEY,
+                restaurant_id TEXT NOT NULL,
+                number INTEGER NOT NULL,
+                description TEXT,
+                capacity INTEGER NOT NULL CHECK (capacity >= 1),
+                status TEXT NOT NULL DEFAULT 'libre',
+                reserved_for TEXT,
+                occupied_by TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(restaurant_id, number),
+                FOREIGN KEY(restaurant_id) REFERENCES restaurants(id),
+                FOREIGN KEY(reserved_for) REFERENCES employees(id),
+                FOREIGN KEY(occupied_by) REFERENCES employees(id)
             )
         `.split(';')
 
         for (const q of queries) {
             if (q.trim()) await this.run(q)
+        }
+
+        // Bases de datos creadas antes de existir los descuentos: CREATE TABLE IF NOT EXISTS
+        // no añade columnas a una tabla existente
+        await this.addColumnIfMissing('orders', 'discount_code', 'TEXT')
+        await this.addColumnIfMissing('orders', 'discount_percentage', 'INTEGER')
+        await this.addColumnIfMissing('orders', 'subtotal', 'REAL')
+        await this.addColumnIfMissing('orders', 'discount_amount', 'REAL')
+        await this.addColumnIfMissing('orders', 'total', 'REAL')
+    }
+
+    private async addColumnIfMissing(table: string, column: string, definition: string): Promise<void> {
+        const columns = await this.all<{ name: string }>(`PRAGMA table_info(${table})`)
+        if (!columns.some(c => c.name === column)) {
+            await this.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
         }
     }
 }

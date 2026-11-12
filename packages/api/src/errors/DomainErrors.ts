@@ -162,3 +162,104 @@ export class OrderNotFoundError extends AppError {
   }
 }
 
+export class DiscountNotFoundError extends AppError {
+  constructor() {
+    super('Discount not found')
+  }
+}
+
+export class InvalidDiscountCodeError extends AppError {
+  constructor() {
+    super('Discount code must match ^[A-Z0-9_-]{3,30}$')
+  }
+}
+
+export class InvalidDiscountPercentageError extends AppError {
+  constructor() {
+    super('Discount percentage must be an integer between 1 and 100')
+  }
+}
+
+export class InvalidDiscountActiveError extends AppError {
+  constructor() {
+    super('Active must be a boolean')
+  }
+}
+
+export class DuplicatedDiscountCodeError extends AppError {
+  constructor() {
+    super('Discount code already exists')
+  }
+}
+
+export class DiscountInactiveError extends AppError {
+  constructor() {
+    super('Discount is not active')
+  }
+}
+
+export class OrderDiscountAlreadyAppliedError extends AppError {
+  constructor() {
+    super('Order already has a discount applied')
+  }
+}
+
+export class OrderAccessDeniedError extends AppError {
+  constructor() {
+    super('Order belongs to another client')
+  }
+}
+
+export class TableNotFoundError extends AppError {
+  constructor() {
+    super('Table not found')
+  }
+}
+
+export class InvalidTableStatusError extends AppError {
+  constructor(message?: string) {
+    super(message ?? 'Invalid table status')
+  }
+}
+
+export class InvalidTableNumberError extends AppError {
+  constructor() {
+    super('Table number must be an integer greater than or equal to 1')
+  }
+}
+
+export class InvalidTableCapacityError extends AppError {
+  constructor() {
+    super('Table capacity must be an integer greater than or equal to 1')
+  }
+}
+
+export class InvalidPeopleCountError extends AppError {
+  constructor() {
+    super('People count must be an integer greater than or equal to 1')
+  }
+}
+
+export class InvalidReservationClientError extends AppError {
+  constructor() {
+    super('Reservation client not found')
+  }
+}
+
+export class DuplicatedTableNumberError extends AppError {
+  constructor() {
+    super('Table number already exists in this restaurant')
+  }
+}
+
+export class TableNotAvailableError extends AppError {
+  constructor() {
+    super('Table is not available')
+  }
+}
+
+export class TableOccupiedError extends AppError {
+  constructor() {
+    super('Cannot delete an occupied table')
+  }
+}

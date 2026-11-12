@@ -2,7 +2,7 @@ import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular
 import { ActivatedRoute, RouterLink } from '@angular/router'
 import { DecimalPipe, DatePipe, NgClass } from '@angular/common'
 import { LucideAngularModule } from 'lucide-angular'
-import { OrderService } from '../../core/services/order.service'
+import { OrderService, discountErrorMessage } from '../../core/services/order.service'
 import { Order, OrderItem } from '../../core/models/order.model'
 
 @Component({
@@ -24,7 +24,7 @@ import { Order, OrderItem } from '../../core/models/order.model'
           </div>
         </div>
 
-        <div class="ticket card">
+        <div class="ticket card" data-testid="order-summary">
           <div class="ticket-header">
             @if (order()!.restaurantLogoUrl) {
               <img [src]="order()!.restaurantLogoUrl" [alt]="order()!.restaurantName" class="ticket-logo">
@@ -59,11 +59,43 @@ import { Order, OrderItem } from '../../core/models/order.model'
 
           <div class="ticket-divider"></div>
 
+          <div class="ticket-row">
+            <span>Subtotal</span>
+            <span data-testid="order-subtotal">{{ subtotal() | number:'1.2-2' }} €</span>
+          </div>
+          @if (order()!.discountCode) {
+            <div class="ticket-row discount-row">
+              <span>Descuento <span data-testid="order-discount-code">{{ order()!.discountCode }}</span> ({{ order()!.discountPercentage }}%)</span>
+              <span data-testid="order-discount-amount">-{{ order()!.discountAmount ?? 0 | number:'1.2-2' }} €</span>
+            </div>
+          }
           <div class="ticket-total">
             <span>Total</span>
-            <strong>{{ getTotal() | number:'1.2-2' }} €</strong>
+            <strong data-testid="order-total">{{ total() | number:'1.2-2' }} €</strong>
           </div>
         </div>
+
+        @if (discountSuccess()) {
+          <div class="alert-success" role="status" data-testid="discount-success">{{ discountSuccess() }}</div>
+        }
+
+        @if (!order()!.discountCode) {
+          <div class="discount-card card">
+            @if (discountError()) {
+              <div class="alert-error" role="alert" data-testid="discount-error">{{ discountError() }}</div>
+            }
+            <label for="order-discount-code">¿Tienes un código de descuento?</label>
+            <div class="discount-form">
+              <input id="order-discount-code" type="text" class="form-control" autocomplete="off" maxlength="40"
+                     placeholder="DISCOUNT30" [value]="discountCode()" (input)="onDiscountInput($event)"
+                     (keyup.enter)="applyDiscount()" [disabled]="applying()" data-testid="order-discount-code-input" />
+              <button type="button" class="btn btn-primary" (click)="applyDiscount()"
+                      [disabled]="applying() || !discountCode().trim()" data-testid="apply-discount-button">
+                @if (applying()) { Aplicando... } @else { Aplicar }
+              </button>
+            </div>
+          </div>
+        }
       }
     </div>
   `,
@@ -165,6 +197,42 @@ import { Order, OrderItem } from '../../core/models/order.model'
       color: var(--text-secondary);
       font-size: 13px;
     }
+    .ticket-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .discount-row {
+      color: var(--green-light);
+    }
+    .discount-card {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .discount-card label {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .discount-form {
+      display: flex;
+      gap: 8px;
+    }
+    .discount-form input {
+      flex: 1;
+      text-transform: uppercase;
+    }
+    .alert-success {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--green-glow);
+      color: var(--green-light);
+      font-size: 14px;
+    }
     .ticket-total {
       display: flex;
       justify-content: space-between;
@@ -181,9 +249,23 @@ export class OrderDetailComponent implements OnInit, OnDestroy {
   readonly order = signal<Order | null>(null)
   readonly loading = signal(true)
   readonly error = signal<string | null>(null)
+  readonly discountCode = signal('')
+  readonly discountError = signal<string | null>(null)
+  readonly discountSuccess = signal<string | null>(null)
+  readonly applying = signal(false)
+
+  /** Importes de la API; si no vienen (respuesta antigua), se calculan con los precios de los ítems. */
+  readonly subtotal = computed(() => this.order()?.subtotal ?? this.getTotal())
+  readonly total = computed(() => this.order()?.total ?? this.subtotal())
 
   ngOnInit(): void {
     const orderId = this.route.snapshot.paramMap.get('id')!
+    // El carrito navega aquí con el error del código si no se pudo aplicar al confirmar
+    const state = history.state as { discountError?: string; discountCode?: string } | null
+    if (state?.discountError) {
+      this.discountError.set(state.discountError)
+      this.discountCode.set(state.discountCode ?? '')
+    }
     this.loadOrder(orderId)
     this.pollInterval = setInterval(() => this.loadOrder(orderId, false), 5000)
   }
@@ -204,6 +286,31 @@ export class OrderDetailComponent implements OnInit, OnDestroy {
       error: () => {
         this.error.set('Error al cargar el pedido')
         this.loading.set(false)
+      }
+    })
+  }
+
+  onDiscountInput(event: Event): void {
+    this.discountCode.set((event.target as HTMLInputElement).value)
+  }
+
+  applyDiscount(): void {
+    const order = this.order()
+    const code = this.discountCode().trim()
+    if (!order || !code || this.applying()) return
+
+    this.applying.set(true)
+    this.discountError.set(null)
+    this.discountSuccess.set(null)
+    this.orderService.applyDiscount(order.id, code).subscribe({
+      next: (updated) => {
+        this.order.set(updated)
+        this.discountSuccess.set(`Código ${updated.discountCode} aplicado.`)
+        this.applying.set(false)
+      },
+      error: (err) => {
+        this.discountError.set(discountErrorMessage(err))
+        this.applying.set(false)
       }
     })
   }

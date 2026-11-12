@@ -18,6 +18,8 @@ import {
   Settings,
   Store,
   CircleAlert,
+  Table,
+  Tag,
 } from 'lucide-angular'
 
 import { routes } from './app.routes'
@@ -47,6 +49,8 @@ export const appConfig: ApplicationConfig = {
         Settings,
         Store,
         CircleAlert,
+        Table,
+        Tag,
       }),
     ),
   ],

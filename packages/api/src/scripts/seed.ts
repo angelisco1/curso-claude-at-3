@@ -158,6 +158,43 @@ const seed = async () => {
 
         console.log('Restaurant 2 dishes created: 1 dish + 1 drink')
 
+        // Códigos de descuento globales (code es UNIQUE: INSERT OR IGNORE los hace idempotentes)
+        const discounts = [
+            { id: 'discount-1', code: 'DISCOUNT30', percentage: 30, active: 1 },
+            { id: 'discount-2', code: 'WELCOME10', percentage: 10, active: 1 },
+            { id: 'discount-3', code: 'BLACK_FRIDAY', percentage: 50, active: 0 },
+        ]
+        for (const discount of discounts) {
+            await dbConfig.run(`
+                INSERT OR IGNORE INTO discounts (id, code, percentage, active, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [discount.id, discount.code, discount.percentage, discount.active, new Date().toISOString(), new Date().toISOString()])
+        }
+
+        console.log('Discounts created: DISCOUNT30 (30%), WELCOME10 (10%), BLACK_FRIDAY (50%, inactivo)')
+
+        // Mesas de ejemplo con ids fijos (INSERT OR IGNORE las hace idempotentes)
+        const tables = [
+            { id: 'table-rest-1-1', restaurantId: 'rest-1', number: 1, capacity: 2, description: 'Junto a la ventana' },
+            { id: 'table-rest-1-2', restaurantId: 'rest-1', number: 2, capacity: 2, description: null },
+            { id: 'table-rest-1-3', restaurantId: 'rest-1', number: 3, capacity: 4, description: 'Terraza' },
+            { id: 'table-rest-1-4', restaurantId: 'rest-1', number: 4, capacity: 4, description: null },
+            { id: 'table-rest-1-5', restaurantId: 'rest-1', number: 5, capacity: 6, description: 'Salón principal' },
+            { id: 'table-rest-1-6', restaurantId: 'rest-1', number: 6, capacity: 6, description: null },
+            { id: 'table-rest-2-1', restaurantId: 'rest-2', number: 1, capacity: 2, description: null },
+            { id: 'table-rest-2-2', restaurantId: 'rest-2', number: 2, capacity: 4, description: 'Terraza' },
+            { id: 'table-rest-2-3', restaurantId: 'rest-2', number: 3, capacity: 4, description: null },
+            { id: 'table-rest-2-4', restaurantId: 'rest-2', number: 4, capacity: 6, description: 'Reservado para grupos' },
+        ]
+        for (const table of tables) {
+            await dbConfig.run(`
+                INSERT OR IGNORE INTO tables (id, restaurant_id, number, description, capacity, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'libre', ?, ?)
+            `, [table.id, table.restaurantId, table.number, table.description, table.capacity, new Date().toISOString(), new Date().toISOString()])
+        }
+
+        console.log('Tables created: 6 in rest-1 (table-rest-1-1..6) and 4 in rest-2 (table-rest-2-1..4)')
+
         const order1Id = randomUUID()
         await dbConfig.run(`
             INSERT OR IGNORE INTO orders (id, restaurant_id, table_id, client_id, created_at)

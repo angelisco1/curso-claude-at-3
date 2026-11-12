@@ -2,7 +2,8 @@ import { Component, inject, signal } from '@angular/core'
 import { Router, RouterLink } from '@angular/router'
 import { DecimalPipe } from '@angular/common'
 import { CartStore } from '../../core/store/cart.store'
-import { OrderService } from '../../core/services/order.service'
+import { OrderService, discountErrorMessage } from '../../core/services/order.service'
+import { Order } from '../../core/models/order.model'
 
 @Component({
   selector: 'app-cart',
@@ -15,7 +16,7 @@ import { OrderService } from '../../core/services/order.service'
       </div>
 
       @if (cartStore.items().length === 0) {
-        <div class="empty-state card">
+        <div class="empty-state card" data-testid="cart-empty">
           <p>Tu carrito está vacío</p>
           <a routerLink="/restaurants" class="btn btn-primary" style="margin-top: 16px;">
             Ver restaurantes
@@ -25,7 +26,7 @@ import { OrderService } from '../../core/services/order.service'
         <div class="cart-layout">
           <div class="cart-items">
             @for (item of cartStore.items(); track item.dish.id) {
-              <div class="cart-item card">
+              <div class="cart-item card" [attr.data-testid]="'cart-item-' + item.dish.id">
                 <div class="item-info">
                   <h3>{{ item.dish.name }}</h3>
                   <p class="item-price">{{ item.dish.price | number:'1.2-2' }} € / ud</p>
@@ -43,17 +44,30 @@ import { OrderService } from '../../core/services/order.service'
             }
           </div>
 
-          <aside class="order-summary card">
+          <aside class="order-summary card" data-testid="cart-summary">
             <h3>Resumen</h3>
+            @if (cartStore.tableNumber() !== null) {
+              <div class="summary-row">
+                <span>Mesa</span>
+                <span data-testid="cart-table-number">{{ cartStore.tableNumber() }}</span>
+              </div>
+            }
             <div class="summary-row">
               <span>Items ({{ cartStore.itemCount() }})</span>
               <span>{{ cartStore.total() | number:'1.2-2' }} €</span>
             </div>
             <div class="summary-row total">
               <span>Total</span>
-              <strong>{{ cartStore.total() | number:'1.2-2' }} €</strong>
+              <strong data-testid="cart-total">{{ cartStore.total() | number:'1.2-2' }} €</strong>
             </div>
-            <button class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 16px;" 
+            <div class="discount-field">
+              <label for="discount-code">Código de descuento (opcional)</label>
+              <input id="discount-code" type="text" class="form-control" autocomplete="off" maxlength="40"
+                     placeholder="DISCOUNT30" [value]="discountCode()" (input)="onDiscountInput($event)"
+                     [disabled]="loading()" data-testid="discount-code-input" />
+              <small class="hint">Se aplicará al confirmar el pedido.</small>
+            </div>
+            <button data-testid="confirm-order-button" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 16px;" 
                     [disabled]="loading()" (click)="confirmOrder()">
               @if (loading()) {
                 Confirmando...
@@ -64,7 +78,7 @@ import { OrderService } from '../../core/services/order.service'
               }
             </button>
             @if (error()) {
-              <p class="error-msg">{{ error() }}</p>
+              <p class="error-msg" role="alert" data-testid="cart-error">{{ error() }}</p>
             }
           </aside>
         </div>
@@ -160,6 +174,23 @@ import { OrderService } from '../../core/services/order.service'
       font-size: 18px;
       color: var(--text-primary);
     }
+    .discount-field {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .discount-field label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .discount-field input {
+      text-transform: uppercase;
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
     .error-msg {
       color: var(--red);
       text-align: center;
@@ -175,6 +206,11 @@ export class CartComponent {
 
   readonly loading = signal(false)
   readonly error = signal<string | null>(null)
+  readonly discountCode = signal('')
+
+  onDiscountInput(event: Event): void {
+    this.discountCode.set((event.target as HTMLInputElement).value)
+  }
 
   increment(dishId: string): void {
     const item = this.cartStore.items().find(i => i.dish.id === dishId)
@@ -207,15 +243,32 @@ export class CartComponent {
       notes: item.notes || null
     }))
 
-    this.orderService.createOrder(restaurantId, items).subscribe({
+    const tableId = this.cartStore.hasTableFor(restaurantId) ? this.cartStore.tableId() : null
+    const code = this.discountCode().trim()
+
+    this.orderService.createOrder(restaurantId, tableId, items).subscribe({
       next: (order) => {
+        // El pedido ya existe: se vacía el carrito pase lo que pase con el descuento
         this.cartStore.clear()
-        this.router.navigate(['/orders', order.id])
+        if (!code) {
+          this.goToOrder(order)
+          return
+        }
+        this.orderService.applyDiscount(order.id, code).subscribe({
+          next: (discounted) => this.goToOrder(discounted),
+          // Si el código falla, el pedido no se pierde: se muestra el error en el detalle,
+          // donde se puede reintentar con otro código
+          error: (err) => this.goToOrder(order, { discountError: discountErrorMessage(err), discountCode: code })
+        })
       },
-      error: (err) => {
+      error: () => {
         this.error.set('Error al confirmar el pedido. Inténtalo de nuevo.')
         this.loading.set(false)
       }
     })
+  }
+
+  private goToOrder(order: Order, state: { discountError?: string; discountCode?: string } = {}): void {
+    this.router.navigate(['/orders', order.id], { state })
   }
 }

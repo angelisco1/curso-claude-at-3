@@ -11,6 +11,7 @@
     "dev:empleados": "npm run start -w @resttek/web-empleados",
     "dev:clientes": "npm run start -w @resttek/web-clientes",
     "test": "npm run test -w @resttek/api",
-    "seed": "npm run seed -w @resttek/api"
+    "seed": "npm run seed -w @resttek/api",
+    "e2e": "playwright test -c e2e/playwright.config.ts"
   }
 }

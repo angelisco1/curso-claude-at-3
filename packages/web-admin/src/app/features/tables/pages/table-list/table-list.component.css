@@ -1,0 +1,25 @@
+.table-number {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.status-libre {
+  background: var(--green-glow);
+  color: var(--green-light);
+}
+
+.status-ocupada {
+  background: var(--red-glow);
+  color: var(--red-text);
+}
+
+.status-reservada {
+  background: rgba(250, 204, 21, 0.15);
+  color: var(--yellow);
+}
+
+.reserved-for {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}

@@ -11,6 +11,10 @@
           <lucide-icon name="layout-dashboard" [size]="18"></lucide-icon>
           <span>Dashboard</span>
         </a>
+        <a routerLink="/discounts" routerLinkActive="active" class="nav-item" data-testid="nav-discounts">
+          <lucide-icon name="tag" [size]="18"></lucide-icon>
+          <span>Descuentos</span>
+        </a>
       }
 
       <div class="nav-section-label">Mis restaurantes</div>
@@ -39,6 +43,10 @@
               <a [routerLink]="['/restaurants', r.id, 'employees']" routerLinkActive="active" class="sub-nav-item">
                 <lucide-icon name="users" [size]="14"></lucide-icon>
                 <span>Empleados</span>
+              </a>
+              <a [routerLink]="['/restaurants', r.id, 'tables']" routerLinkActive="active" class="sub-nav-item" data-testid="nav-restaurant-tables">
+                <lucide-icon name="table" [size]="14"></lucide-icon>
+                <span>Mesas</span>
               </a>
               <a [routerLink]="['/restaurants', r.id, 'edit']" routerLinkActive="active" class="sub-nav-item">
                 <lucide-icon name="settings" [size]="14"></lucide-icon>

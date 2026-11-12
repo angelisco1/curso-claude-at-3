@@ -1,0 +1,1759 @@
+openapi: 3.1.0
+info:
+  title: Resttek API
+  version: 1.0.0
+  summary: API de gestión de restaurantes Resttek.
+  description: |
+    Contrato de la API de Resttek. De momento documenta la **gestión de mesas** (issue #5),
+    los endpoints de **pedidos** que usan los frontends en esa funcionalidad y los
+    **códigos de descuento** aplicables a los pedidos.
+
+    ## Autenticación
+
+    Todas las rutas documentadas exigen un JWT en la cabecera `Authorization: Bearer <token>`,
+    obtenido en `POST /api/v1/auth/login`. El payload del token contiene `id`, `role` y
+    `restaurantId` del usuario (los clientes se guardan en la misma tabla `employees` con rol
+    `cliente` y `restaurantId: null`).
+
+    ## Formato de errores
+
+    - Errores de dominio (lanzados por los servicios y gestionados por el `errorHandler`):
+      `{ "error": "<NombreDelError>", "message": "<detalle>" }`.
+    - Errores de los middlewares `authenticate` / `authorize` / `authorizeRestaurant` (401 y 403):
+      solo `{ "error": "<detalle>" }`.
+    - Los endpoints de pedidos `POST /api/v1/orders`, `GET /api/v1/orders/active` y
+      `GET /api/v1/orders/{id}` gestionan sus errores en el propio controlador y devuelven solo
+      `{ "error": "<mensaje>" }`. Los de descuento de un pedido (`/api/v1/orders/{id}/discount`)
+      y los de `/api/v1/discounts` usan el `errorHandler`.
+
+    ## Códigos de descuento
+
+    - Un **descuento** es un código (elegido libremente por el `admin`) con un porcentaje entero
+      entre 1 y 100. Es global: vale para los pedidos de cualquier restaurante.
+    - El código se normaliza con `trim()` + mayúsculas (`" black_friday "` → `BLACK_FRIDAY`), debe
+      cumplir `^[A-Z0-9_-]{3,30}$` y es **único**.
+    - Un descuento puede **desactivarse** (`active: false`); un código inactivo no se puede aplicar
+      a pedidos, pero los pedidos que ya lo tenían lo conservan.
+    - Un pedido admite **un único descuento**. Al aplicarlo, el pedido guarda una copia del código
+      y del porcentaje (`discountCode`, `discountPercentage`), así que editar, desactivar o borrar
+      el descuento después no altera los pedidos existentes.
+    - En las lecturas de pedidos se devuelven `subtotal` (suma de `dishPrice × quantity` de los
+      ítems), `discountAmount` (`subtotal × porcentaje / 100`) y `total` (`subtotal −
+      discountAmount`), redondeados a 2 decimales.
+    - **Importes fijados al aplicar el descuento:** al aplicar un código, los tres importes se
+      calculan con los precios de **ese momento** y se guardan en el pedido. Las lecturas devuelven
+      los importes guardados, así que si después cambia el precio de un plato el total del pedido
+      con descuento **no cambia**. Al quitar el descuento se borran.
+    - **Pedidos sin descuento:** no tienen importes guardados; se calculan al leer con el precio
+      actual de los platos (`discountAmount: 0`, `total = subtotal`). Quedan fijados en cuanto se
+      les aplica un código.
+    - **Cambios en los ítems:** cambiar el estado de un ítem (`PATCH .../items/{itemId}/status`)
+      no afecta a los importes. La API no permite añadir, quitar ni modificar platos o cantidades
+      de un pedido ya creado, así que el importe fijado no puede quedar desfasado respecto a sus
+      ítems. Si en el futuro se permite, la regla será recalcular los importes fijados con el mismo
+      porcentaje guardado y los precios del momento del cambio.
+
+    ## Acceso por restaurante (mesas)
+
+    Los roles de empleado ligados a un restaurante (`manager`, `camarero`, `cocinero`) solo pueden
+    operar sobre las mesas de **su** restaurante (`restaurantId` del token igual al `restaurantId`
+    de la ruta); si no, se responde `403`. El `admin` y el `cliente` no tienen esa restricción.
+    Las rutas existentes (ingredientes, platos) no hacen esta comprobación; las de mesas sí,
+    mediante un nuevo middleware `authorizeRestaurant`.
+
+    ## Reservas con dueño (`reservedFor`)
+
+    Una mesa en estado `reservada` puede tener un **cliente dueño de la reserva**. Se modela así:
+
+    - Columna `tables.reserved_for` con el **id** del cliente (no el email): el id es lo que viaja
+      en el JWT (`req.user.id`), es estable y es lo mismo que se guarda en `orders.client_id`.
+    - Como los empleados no conocen el id de los clientes, al reservar se indica
+      `reservedForEmail` en `PATCH /{id}/status`; la API lo resuelve al id de un usuario con rol
+      `cliente` (si no existe, `400 InvalidReservationClientError`).
+    - La respuesta expone `reservedForClientId` y `reservedForEmail` (ambos `null` si la mesa no
+      está reservada o la reserva no tiene dueño).
+    - Al cambiar la mesa a cualquier estado distinto de `reservada` (incluida la ocupación), la
+      reserva se limpia (`reserved_for = NULL`).
+    - `GET /available` devuelve las mesas `libre`, las `reservada` cuyo dueño es el usuario
+      autenticado y las `ocupada` por él mismo, siempre con capacidad suficiente.
+    - `POST /{id}/occupy` (solo `cliente` y `admin`) ocupa de forma atómica una mesa `libre`,
+      `reservada` para el propio usuario u `ocupada` ya por él (idempotente), con un único
+      `UPDATE ... WHERE` condicional.
+    - Un cliente nunca recibe datos de reservas de otras personas: no puede usar `GET /` ni
+      `GET /{id}` (403), `GET /available` solo devuelve sus propias reservas y ocupaciones, y `occupy` devuelve la
+      mesa con la reserva ya limpia.
+    - El dueño de la reserva es **opcional**: una reserva sin `reservedForEmail` (p. ej. reserva
+      telefónica) no la puede ocupar ningún cliente con `occupy`; solo la cambian los empleados.
+    - La reserva es un estado simple, **sin fecha ni hora**.
+    - En `GET /available` cada mesa trae `reservedForMe` (`true` si está reservada para el usuario)
+      y `occupiedByMe` (`true` si ya la ocupa el usuario).
+
+    ## Ocupante (`occupiedBy`)
+
+    - Columna `tables.occupied_by` con el id del cliente que ocupó la mesa con `occupy`.
+    - Es `null` si la mesa la puso `ocupada` un empleado con `PATCH /{id}/status`.
+    - Se limpia al cambiar la mesa a cualquier otro estado.
+    - Permite que `occupy` sea **idempotente** para el mismo cliente (doble clic o reintento).
+
+    ## Estado de la mesa
+
+    El estado **solo** se cambia con `PATCH /{id}/status`; `POST` y `PUT` no aceptan `status`.
+    Las mesas se crean siempre `libre`.
+
+    ## Liberación de mesas
+
+    La liberación es siempre manual: un empleado (`admin`, `manager` o `camarero`) cambia el estado
+    a `libre`. Si el cliente abandona tras ocupar, la mesa sigue `ocupada` hasta entonces. Liberar
+    está permitido aunque la mesa tenga pedidos activos.
+
+    ## Mesas de otro restaurante
+
+    Una mesa que existe pero pertenece a otro restaurante se trata como inexistente
+    (`404 TableNotFoundError`), y los listados de un restaurante sin mesas (o inexistente)
+    devuelven `[]`. Solo `createTable` comprueba que el restaurante existe
+    (`404 RestaurantNotFoundError`).
+
+    ## Limitaciones conocidas (fuera del alcance de la issue #5)
+
+    - `POST /api/v1/orders` no valida `tableId`: no comprueba que la mesa exista, sea del
+      restaurante, esté ocupada ni que la ocupe el cliente que hace el pedido.
+    - `GET /api/v1/orders/active` no tiene control de rol ni de restaurante: cualquier usuario
+      autenticado, incluido un cliente, puede listar los pedidos activos de cualquier restaurante.
+  contact:
+    name: Equipo Resttek
+  license:
+    name: Privada
+    identifier: UNLICENSED
+servers:
+  - url: http://localhost:3000
+    description: Desarrollo local (`npm run dev:api`)
+tags:
+  - name: Mesas
+    description: Mesas de un restaurante, su disponibilidad y su estado.
+  - name: Pedidos
+    description: Pedidos de los clientes, su asociación a una mesa y su código de descuento.
+  - name: Descuentos
+    description: Códigos de descuento (porcentaje) que el administrador crea y se aplican a los pedidos.
+security:
+  - bearerAuth: []
+
+paths:
+  /api/v1/restaurants/{restaurantId}/tables:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+    get:
+      tags: [Mesas]
+      summary: Listar las mesas de un restaurante
+      operationId: listTables
+      description: |
+        Devuelve todas las mesas del restaurante ordenadas por `number`. Si el restaurante no tiene
+        mesas o no existe, devuelve `200 []`.
+
+        **Roles:** `admin`, `manager`, `camarero`, `cocinero` (estos tres últimos, solo de su
+        restaurante). Un `cliente` recibe 403.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de mesas (vacía si no hay).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Table'
+              example:
+                - id: table-rest-1-1
+                  restaurantId: rest-1
+                  number: 1
+                  description: Junto a la ventana
+                  capacity: 2
+                  status: ocupada
+                  reservedForClientId: null
+                  reservedForEmail: null
+                  occupiedByClientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                  createdAt: '2026-11-12T10:00:00.000Z'
+                  updatedAt: '2026-11-12T13:05:00.000Z'
+                - id: table-rest-1-2
+                  restaurantId: rest-1
+                  number: 2
+                  description: null
+                  capacity: 4
+                  status: reservada
+                  reservedForClientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                  reservedForEmail: cliente1@resttek.com
+                  occupiedByClientId: null
+                  createdAt: '2026-11-12T10:00:00.000Z'
+                  updatedAt: '2026-11-12T12:30:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Mesas]
+      summary: Crear una mesa
+      operationId: createTable
+      description: |
+        Crea una mesa en el restaurante. Se crea siempre en estado `libre`, sin reserva ni ocupante;
+        el cuerpo **no** acepta `status` (el estado se cambia con `PATCH /{id}/status`).
+
+        Validaciones (en este orden): el restaurante existe (`404 RestaurantNotFoundError`);
+        `number` entero ≥ 1 (`400 InvalidTableNumberError`); `capacity` entero ≥ 1
+        (`400 InvalidTableCapacityError`); `description` con `trim()` y, si queda vacía o no se
+        envía, `null`; `number` único dentro del restaurante (`409 DuplicatedTableNumberError`).
+
+        **Roles:** `admin`. Cualquier otro rol recibe 403.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTableRequest'
+            example:
+              number: 7
+              description: Terraza
+              capacity: 4
+      responses:
+        '201':
+          description: Mesa creada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+              example:
+                id: 3f6c2a9e-8b1d-4c7a-9e2f-5d4b3a2c1e0f
+                restaurantId: rest-1
+                number: 7
+                description: Terraza
+                capacity: 4
+                status: libre
+                reservedForClientId: null
+                reservedForEmail: null
+                occupiedByClientId: null
+                createdAt: '2026-11-12T10:00:00.000Z'
+                updatedAt: '2026-11-12T10:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/InvalidTableData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/RestaurantNotFound'
+        '409':
+          $ref: '#/components/responses/DuplicatedTableNumber'
+
+  /api/v1/restaurants/{restaurantId}/tables/available:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+    get:
+      tags: [Mesas]
+      summary: Listar mesas disponibles para N comensales
+      operationId: listAvailableTables
+      description: |
+        Devuelve las mesas del restaurante con `capacity >= people` (en los tres casos) que estén:
+
+        - `libre`;
+        - `reservada` **para el usuario autenticado** (`reserved_for` igual al `id` del JWT);
+        - `ocupada` **por el usuario autenticado** (`occupied_by` igual al `id` del JWT), para que un
+          cliente que recarga la app pueda volver a elegir su mesa (`occupy` es idempotente y
+          responde 200).
+
+        Nunca incluye mesas ocupadas por otras personas o por un empleado, ni reservas de otras
+        personas o sin dueño. Orden: `capacity` ascendente y después `number`. Si no hay ninguna,
+        `200 []`.
+
+        Cada elemento es un `AvailableTable`: la `Table` más los flags `reservedForMe` y
+        `occupiedByMe`.
+
+        **Roles:** `cliente`, `admin`, `manager`, `camarero` (`manager` y `camarero`, solo de su
+        restaurante). El `cocinero` recibe 403.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: people
+          in: query
+          required: true
+          description: Número de comensales (entero ≥ 1).
+          schema:
+            type: integer
+            minimum: 1
+          example: 3
+      responses:
+        '200':
+          description: Mesas disponibles (vacía si no hay ninguna).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailableTable'
+              example:
+                - id: table-rest-1-2
+                  restaurantId: rest-1
+                  number: 2
+                  description: null
+                  capacity: 4
+                  status: reservada
+                  reservedForClientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                  reservedForEmail: cliente1@resttek.com
+                  occupiedByClientId: null
+                  reservedForMe: true
+                  occupiedByMe: false
+                  createdAt: '2026-11-12T10:00:00.000Z'
+                  updatedAt: '2026-11-12T12:30:00.000Z'
+                - id: table-rest-1-3
+                  restaurantId: rest-1
+                  number: 3
+                  description: null
+                  capacity: 4
+                  status: libre
+                  reservedForClientId: null
+                  reservedForEmail: null
+                  occupiedByClientId: null
+                  reservedForMe: false
+                  occupiedByMe: false
+                  createdAt: '2026-11-12T10:00:00.000Z'
+                  updatedAt: '2026-11-12T10:00:00.000Z'
+                - id: table-rest-1-5
+                  restaurantId: rest-1
+                  number: 5
+                  description: null
+                  capacity: 6
+                  status: ocupada
+                  reservedForClientId: null
+                  reservedForEmail: null
+                  occupiedByClientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                  reservedForMe: false
+                  occupiedByMe: true
+                  createdAt: '2026-11-12T10:00:00.000Z'
+                  updatedAt: '2026-11-12T13:05:00.000Z'
+        '400':
+          $ref: '#/components/responses/InvalidPeopleCount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/restaurants/{restaurantId}/tables/{id}:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/TableId'
+    get:
+      tags: [Mesas]
+      summary: Obtener una mesa
+      operationId: getTable
+      description: |
+        Devuelve una mesa del restaurante. Si no existe o es de otro restaurante,
+        `404 TableNotFoundError`.
+
+        **Roles:** `admin`, `manager`, `camarero`, `cocinero` (estos tres últimos, solo de su
+        restaurante). Un `cliente` recibe 403 (así no puede ver datos de reservas ajenas).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Mesa encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+              example:
+                id: table-rest-1-1
+                restaurantId: rest-1
+                number: 1
+                description: Junto a la ventana
+                capacity: 2
+                status: ocupada
+                reservedForClientId: null
+                reservedForEmail: null
+                occupiedByClientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                createdAt: '2026-11-12T10:00:00.000Z'
+                updatedAt: '2026-11-12T13:05:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/TableNotFound'
+    put:
+      tags: [Mesas]
+      summary: Editar una mesa
+      operationId: updateTable
+      description: |
+        Reemplaza `number`, `description` y `capacity` de la mesa. **No** acepta ni modifica
+        `status`, la reserva ni el ocupante (para eso, `PATCH /{id}/status`).
+
+        Errores: `404 TableNotFoundError` (no existe o es de otro restaurante),
+        `400 InvalidTableNumberError` / `400 InvalidTableCapacityError`,
+        `409 DuplicatedTableNumberError` (otra mesa del restaurante ya tiene ese `number`).
+
+        **Roles:** `admin`. Cualquier otro rol recibe 403.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTableRequest'
+            example:
+              number: 1
+              description: Junto a la ventana (mesa alta)
+              capacity: 3
+      responses:
+        '200':
+          description: Mesa actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+              example:
+                id: table-rest-1-1
+                restaurantId: rest-1
+                number: 1
+                description: Junto a la ventana (mesa alta)
+                capacity: 3
+                status: libre
+                reservedForClientId: null
+                reservedForEmail: null
+                occupiedByClientId: null
+                createdAt: '2026-11-12T10:00:00.000Z'
+                updatedAt: '2026-11-12T14:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/InvalidTableData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/TableNotFound'
+        '409':
+          $ref: '#/components/responses/DuplicatedTableNumber'
+    delete:
+      tags: [Mesas]
+      summary: Borrar una mesa
+      operationId: deleteTable
+      description: |
+        Borra la mesa. No se puede borrar una mesa `ocupada` (`409 TableOccupiedError`); las
+        `libre` y `reservada` sí. Los pedidos antiguos conservan su `tableId` (no hay clave foránea
+        de `orders.table_id` a `tables.id`).
+
+        **Roles:** `admin`. Cualquier otro rol recibe 403.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Mesa borrada (sin cuerpo).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/TableNotFound'
+        '409':
+          description: La mesa está ocupada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainError'
+              example:
+                error: TableOccupiedError
+                message: Cannot delete an occupied table
+
+  /api/v1/restaurants/{restaurantId}/tables/{id}/occupy:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/TableId'
+    post:
+      tags: [Mesas]
+      summary: Ocupar una mesa
+      operationId: occupyTable
+      description: |
+        Pone la mesa en `ocupada` con `occupiedByClientId` = usuario autenticado, de forma
+        **atómica** con un único `UPDATE` condicional:
+
+        ```sql
+        UPDATE tables SET status = 'ocupada', occupied_by = :userId, reserved_for = NULL, updated_at = :now
+        WHERE id = :id AND restaurant_id = :restaurantId AND capacity >= :people
+          AND (status = 'libre'
+               OR (status = 'reservada' AND reserved_for = :userId)
+               OR (status = 'ocupada' AND occupied_by = :userId))
+        ```
+
+        - Es **idempotente** para el mismo usuario: si la mesa ya está ocupada por él (doble clic o
+          reintento), responde `200` con la mesa.
+        - Si no se aplica: `404 TableNotFoundError` si la mesa no existe o es de otro restaurante;
+          en otro caso `409 TableNotAvailableError` (ocupada por otra persona o por un empleado,
+          reservada para otra persona o sin dueño, o `capacity < people`) y no cambia nada.
+        - La respuesta solo contiene datos del propio usuario (la reserva queda limpia).
+
+        Los empleados no usan este endpoint: sientan a los clientes con `PATCH /{id}/status`.
+
+        **Roles:** `cliente` y `admin` (este último, para pruebas). El resto recibe 403.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OccupyTableRequest'
+            example:
+              people: 2
+      responses:
+        '200':
+          description: Mesa ocupada por el usuario (también si ya lo estaba por él).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+              example:
+                id: table-rest-1-1
+                restaurantId: rest-1
+                number: 1
+                description: Junto a la ventana
+                capacity: 2
+                status: ocupada
+                reservedForClientId: null
+                reservedForEmail: null
+                occupiedByClientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                createdAt: '2026-11-12T10:00:00.000Z'
+                updatedAt: '2026-11-12T13:05:00.000Z'
+        '400':
+          $ref: '#/components/responses/InvalidPeopleCount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/TableNotFound'
+        '409':
+          description: La mesa no está disponible para este usuario o no tiene capacidad suficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainError'
+              example:
+                error: TableNotAvailableError
+                message: Table is not available
+
+  /api/v1/restaurants/{restaurantId}/tables/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/TableId'
+    patch:
+      tags: [Mesas]
+      summary: Cambiar el estado de una mesa
+      operationId: updateTableStatus
+      description: |
+        Cambia el estado de la mesa (`libre`, `ocupada`, `reservada`; se normaliza con `trim()` y
+        minúsculas). **Cualquier transición** entre los tres estados está permitida, también al
+        mismo estado, y **nunca responde 409**: liberar (`libre`) siempre se puede, aunque la mesa
+        tenga pedidos activos.
+
+        Efectos sobre la reserva y el ocupante (siempre se reescriben):
+
+        | Nuevo estado | `reservedFor*` | `occupiedByClientId` |
+        | --- | --- | --- |
+        | `libre` | `null` | `null` |
+        | `ocupada` | `null` | `null` (la sienta un empleado) |
+        | `reservada` | cliente de `reservedForEmail`, o `null` (reserva sin dueño) | `null` |
+
+        `reservedForEmail` solo se tiene en cuenta con `status: reservada` y debe ser el email de un
+        usuario con rol `cliente` (si no, `400 InvalidReservationClientError`); con otro estado se
+        ignora.
+
+        **Roles:** `admin`, `manager`, `camarero` (`manager` y `camarero`, solo de su restaurante). El
+        `cocinero` y el `cliente` reciben 403.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTableStatusRequest'
+            examples:
+              liberar:
+                summary: Liberar una mesa
+                value:
+                  status: libre
+              sentar:
+                summary: Sentar a un cliente sin app
+                value:
+                  status: ocupada
+              reservar:
+                summary: Reservar para un cliente
+                value:
+                  status: reservada
+                  reservedForEmail: cliente1@resttek.com
+              reservaTelefonica:
+                summary: Reserva sin dueño (telefónica)
+                value:
+                  status: reservada
+      responses:
+        '200':
+          description: Estado actualizado; devuelve la mesa completa.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+              example:
+                id: table-rest-1-2
+                restaurantId: rest-1
+                number: 2
+                description: null
+                capacity: 4
+                status: reservada
+                reservedForClientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                reservedForEmail: cliente1@resttek.com
+                occupiedByClientId: null
+                createdAt: '2026-11-12T10:00:00.000Z'
+                updatedAt: '2026-11-12T12:30:00.000Z'
+        '400':
+          description: Estado inválido o el email no corresponde a ningún cliente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainError'
+              examples:
+                estadoInvalido:
+                  summary: Estado no válido
+                  value:
+                    error: InvalidTableStatusError
+                    message: 'Estado inválido: cerrada. Debe ser uno de: libre, ocupada, reservada'
+                clienteInexistente:
+                  summary: Email que no es de un cliente
+                  value:
+                    error: InvalidReservationClientError
+                    message: Reservation client not found
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/TableNotFound'
+
+  /api/v1/orders:
+    post:
+      tags: [Pedidos]
+      summary: Crear un pedido
+      operationId: createOrder
+      description: |
+        Crea un pedido con estado `pendiente` en todos sus ítems. El `clientId` se toma del `id` del
+        JWT. Cada ítem con `quantity` N se desglosa en N ítems de `quantity: 1` (cada uno con su
+        estado propio).
+
+        `tableId` es **opcional y nullable** y **no se valida** (ver "Limitaciones conocidas"): el
+        cliente envía el id de la mesa que ocupó con `occupy`. La respuesta incluye `tableId` tal
+        cual se guardó (no incluye el número de mesa).
+
+        Los errores los gestiona el propio controlador: cualquier error de validación (o de la base
+        de datos, p. ej. restaurante inexistente) responde 400 con `{ error: <mensaje> }`.
+
+        **Roles:** cualquier usuario autenticado (no hay `authorize`).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+            example:
+              restaurantId: rest-1
+              tableId: table-rest-1-1
+              items:
+                - dishId: dish-1
+                  quantity: 2
+                  notes: Sin cebolla
+                - dishId: dish-5
+                  quantity: 1
+                  notes: null
+      responses:
+        '201':
+          description: |
+            Pedido creado, sin descuento. Los ítems no incluyen los datos del plato (`dishName`,
+            etc.) ni el pedido los importes (`subtotal`, `discountAmount`, `total`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: 9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d
+                restaurantId: rest-1
+                tableId: table-rest-1-1
+                clientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                createdAt: '2026-11-12T13:10:00.000Z'
+                discountCode: null
+                discountPercentage: null
+                items:
+                  - id: 1c2d3e4f-0000-4000-8000-000000000001
+                    dishId: dish-1
+                    quantity: 1
+                    notes: Sin cebolla
+                    status: pendiente
+                  - id: 1c2d3e4f-0000-4000-8000-000000000002
+                    dishId: dish-1
+                    quantity: 1
+                    notes: Sin cebolla
+                    status: pendiente
+                  - id: 1c2d3e4f-0000-4000-8000-000000000003
+                    dishId: dish-5
+                    quantity: 1
+                    notes: null
+                    status: pendiente
+        '400':
+          description: Datos del pedido inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+              example:
+                error: Restaurant ID is required
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/orders/active:
+    get:
+      tags: [Pedidos]
+      summary: Listar los pedidos activos de un restaurante
+      operationId: listActiveOrders
+      description: |
+        Devuelve los pedidos **activos** del restaurante, ordenados por `createdAt` ascendente.
+
+        - **Activo** = el pedido tiene al menos un ítem con estado distinto de `entregado`. Un pedido
+          con **todos** sus ítems `entregado` **no aparece**.
+        - Cada pedido incluye **todos** sus ítems (también los ya entregados), y cada ítem trae
+          `status`, `quantity` (siempre 1), `notes`, `dishName`, `dishPrice` y `dishCategory`.
+        - Incluye `tableId` (`null` en pedidos sin mesa): los frontends de empleados muestran los
+          pedidos de cada mesa filtrando por `tableId` en el cliente.
+
+        **Roles:** cualquier usuario autenticado (no hay `authorize` ni comprobación de restaurante;
+        ver "Limitaciones conocidas").
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: restaurantId
+          in: query
+          required: true
+          description: Id del restaurante.
+          schema:
+            type: string
+          example: rest-1
+      responses:
+        '200':
+          description: Pedidos activos (vacía si no hay).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+              example:
+                - id: 9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d
+                  restaurantId: rest-1
+                  tableId: table-rest-1-1
+                  clientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                  createdAt: '2026-11-12T13:10:00.000Z'
+                  discountCode: null
+                  discountPercentage: null
+                  subtotal: 10
+                  discountAmount: 0
+                  total: 10
+                  items:
+                    - id: 1c2d3e4f-0000-4000-8000-000000000001
+                      dishId: dish-1
+                      quantity: 1
+                      notes: Sin cebolla
+                      status: preparando
+                      dishName: Ensalada César
+                      dishPrice: 8.5
+                      dishCategory: entrante
+                    - id: 1c2d3e4f-0000-4000-8000-000000000003
+                      dishId: dish-5
+                      quantity: 1
+                      notes: null
+                      status: entregado
+                      dishName: Agua mineral
+                      dishPrice: 1.5
+                      dishCategory: bebida
+        '400':
+          description: Falta el parámetro `restaurantId`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+              example:
+                error: restaurantId is required
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/orders/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Pedidos]
+      summary: Obtener un pedido
+      operationId: getOrder
+      description: |
+        Devuelve un pedido con sus ítems (con datos del plato), el descuento aplicado
+        (`discountCode`, `discountPercentage`) y los importes calculados (`subtotal`,
+        `discountAmount`, `total`).
+
+        Los errores los gestiona el propio controlador y devuelven `{ error: <mensaje> }`.
+
+        **Roles:** cualquier usuario autenticado.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Pedido encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: 9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d
+                restaurantId: rest-1
+                tableId: table-rest-1-1
+                clientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                createdAt: '2026-11-12T13:10:00.000Z'
+                discountCode: DISCOUNT30
+                discountPercentage: 30
+                subtotal: 10
+                discountAmount: 3
+                total: 7
+                items:
+                  - id: 1c2d3e4f-0000-4000-8000-000000000001
+                    dishId: dish-1
+                    quantity: 1
+                    notes: Sin cebolla
+                    status: pendiente
+                    dishName: Ensalada César
+                    dishPrice: 8.5
+                    dishCategory: entrante
+                  - id: 1c2d3e4f-0000-4000-8000-000000000003
+                    dishId: dish-5
+                    quantity: 1
+                    notes: null
+                    status: pendiente
+                    dishName: Agua mineral
+                    dishPrice: 1.5
+                    dishCategory: bebida
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: El pedido no existe.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+              example:
+                error: Order not found
+
+  /api/v1/orders/{id}/discount:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    put:
+      tags: [Pedidos]
+      summary: Aplicar un código de descuento a un pedido
+      operationId: applyOrderDiscount
+      description: |
+        Aplica al pedido el descuento cuyo código se indica. El código se normaliza (`trim()` +
+        mayúsculas) antes de buscarlo, así que `" discount30 "` equivale a `DISCOUNT30`.
+
+        - Un pedido admite **un único descuento**: si ya tiene otro código distinto responde
+          `409 OrderDiscountAlreadyAppliedError` (hay que quitarlo antes con `DELETE`).
+        - Es **idempotente**: volver a aplicar el mismo código devuelve `200` sin cambios.
+        - El código debe existir (`404 DiscountNotFoundError`) y estar activo
+          (`409 DiscountInactiveError`).
+        - El pedido guarda una copia del código y el porcentaje, y **fija** `subtotal`,
+          `discountAmount` y `total` calculados con los precios de los platos en este momento. Las
+          lecturas posteriores devuelven esos importes aunque cambien los precios.
+        - Al reaplicar el mismo código (idempotente) los importes fijados no se recalculan.
+
+        Devuelve el pedido completo, con los importes fijados.
+
+        **Roles:** cualquier usuario autenticado (los mismos que pueden crear pedidos). Un `cliente`
+        solo puede aplicar descuentos a **sus propios** pedidos (`403 OrderAccessDeniedError`).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyDiscountRequest'
+            example:
+              code: DISCOUNT30
+      responses:
+        '200':
+          description: Descuento aplicado. Devuelve el pedido con los importes fijados.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: 9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d
+                restaurantId: rest-1
+                tableId: table-rest-1-1
+                clientId: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+                createdAt: '2026-11-12T13:10:00.000Z'
+                discountCode: DISCOUNT30
+                discountPercentage: 30
+                subtotal: 10
+                discountAmount: 3
+                total: 7
+                items:
+                  - id: 1c2d3e4f-0000-4000-8000-000000000001
+                    dishId: dish-1
+                    quantity: 1
+                    notes: null
+                    status: pendiente
+                    dishName: Pizza Margarita
+                    dishPrice: 10
+                    dishCategory: principal
+        '400':
+          $ref: '#/components/responses/InvalidDiscountCode'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/OrderAccessDenied'
+        '404':
+          description: El pedido o el código de descuento no existen.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainError'
+              examples:
+                pedido:
+                  summary: Pedido inexistente
+                  value:
+                    error: OrderNotFoundError
+                    message: Order not found
+                descuento:
+                  summary: Código inexistente
+                  value:
+                    error: DiscountNotFoundError
+                    message: Discount not found
+        '409':
+          description: El código está desactivado o el pedido ya tiene otro descuento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainError'
+              examples:
+                inactivo:
+                  summary: Código desactivado
+                  value:
+                    error: DiscountInactiveError
+                    message: Discount is not active
+                yaAplicado:
+                  summary: El pedido ya tiene otro descuento
+                  value:
+                    error: OrderDiscountAlreadyAppliedError
+                    message: Order already has a discount applied
+    delete:
+      tags: [Pedidos]
+      summary: Quitar el código de descuento de un pedido
+      operationId: removeOrderDiscount
+      description: |
+        Quita el descuento del pedido (`discountCode` y `discountPercentage` pasan a `null`) y borra
+        los importes fijados: a partir de entonces se vuelven a calcular al leer con el precio
+        actual de los platos.
+        Es **idempotente**: si el pedido no tenía descuento también responde `204`.
+
+        **Roles:** cualquier usuario autenticado. Un `cliente` solo puede quitar el descuento de
+        **sus propios** pedidos (`403 OrderAccessDeniedError`).
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Descuento eliminado del pedido (sin cuerpo).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/OrderAccessDenied'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+
+  /api/v1/discounts:
+    get:
+      tags: [Descuentos]
+      summary: Listar los códigos de descuento
+      operationId: listDiscounts
+      description: |
+        Devuelve todos los códigos de descuento ordenados por `code` ascendente. Admite filtrar por
+        estado con `?active=true|false`. La colección es pequeña y se devuelve completa, sin
+        paginar (igual que el resto de listados de la API salvo empleados).
+
+        **Roles:** `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: active
+          in: query
+          required: false
+          description: Filtra por estado. Omitido devuelve todos. Cualquier otro valor responde 400.
+          schema:
+            type: string
+            enum: ['true', 'false']
+          example: 'true'
+      responses:
+        '200':
+          description: Códigos de descuento (vacía si no hay).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Discount'
+              example:
+                - id: 3f1c2b4a-1111-4a2b-9c3d-000000000001
+                  code: BLACK_FRIDAY
+                  percentage: 50
+                  active: false
+                  createdAt: '2026-11-12T10:00:00.000Z'
+                  updatedAt: '2026-11-12T10:00:00.000Z'
+                - id: 3f1c2b4a-1111-4a2b-9c3d-000000000002
+                  code: DISCOUNT30
+                  percentage: 30
+                  active: true
+                  createdAt: '2026-11-12T10:00:00.000Z'
+                  updatedAt: '2026-11-12T10:00:00.000Z'
+        '400':
+          description: Valor de `active` no válido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainError'
+              example:
+                error: InvalidDiscountActiveError
+                message: Active must be a boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Descuentos]
+      summary: Crear un código de descuento
+      operationId: createDiscount
+      description: |
+        Crea un código de descuento. El código se normaliza (`trim()` + mayúsculas), debe cumplir
+        `^[A-Z0-9_-]{3,30}$` y ser único (`409 DuplicatedDiscountCodeError`). El porcentaje es un
+        entero entre 1 y 100. `active` es opcional (por defecto `true`).
+
+        **Roles:** `admin`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDiscountRequest'
+            example:
+              code: black_friday
+              percentage: 50
+      responses:
+        '201':
+          description: Código creado.
+          headers:
+            Location:
+              description: URL del nuevo recurso.
+              schema:
+                type: string
+              example: /api/v1/discounts/3f1c2b4a-1111-4a2b-9c3d-000000000001
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discount'
+              example:
+                id: 3f1c2b4a-1111-4a2b-9c3d-000000000001
+                code: BLACK_FRIDAY
+                percentage: 50
+                active: true
+                createdAt: '2026-11-12T10:00:00.000Z'
+                updatedAt: '2026-11-12T10:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/InvalidDiscountData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Ya existe un descuento con ese código.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainError'
+              example:
+                error: DuplicatedDiscountCodeError
+                message: Discount code already exists
+
+  /api/v1/discounts/{id}:
+    parameters:
+      - $ref: '#/components/parameters/DiscountId'
+    get:
+      tags: [Descuentos]
+      summary: Obtener un código de descuento
+      operationId: getDiscount
+      description: |
+        Devuelve un código de descuento por su id.
+
+        **Roles:** `admin`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Código encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discount'
+              example:
+                id: 3f1c2b4a-1111-4a2b-9c3d-000000000002
+                code: DISCOUNT30
+                percentage: 30
+                active: true
+                createdAt: '2026-11-12T10:00:00.000Z'
+                updatedAt: '2026-11-12T10:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/DiscountNotFound'
+    patch:
+      tags: [Descuentos]
+      summary: Modificar un código de descuento
+      operationId: updateDiscount
+      description: |
+        Modificación parcial: cambia el porcentaje y/o activa o desactiva el código. El `code` es
+        **inmutable** (si se envía, se ignora). Los campos omitidos no cambian. Los pedidos que ya
+        tenían el descuento aplicado conservan su copia del porcentaje.
+
+        **Roles:** `admin`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDiscountRequest'
+            example:
+              active: false
+      responses:
+        '200':
+          description: Código modificado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discount'
+              example:
+                id: 3f1c2b4a-1111-4a2b-9c3d-000000000002
+                code: DISCOUNT30
+                percentage: 30
+                active: false
+                createdAt: '2026-11-12T10:00:00.000Z'
+                updatedAt: '2026-11-12T12:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/InvalidDiscountData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/DiscountNotFound'
+    delete:
+      tags: [Descuentos]
+      summary: Borrar un código de descuento
+      operationId: deleteDiscount
+      description: |
+        Borra el código. Los pedidos que ya lo tenían aplicado conservan su copia del código y del
+        porcentaje.
+
+        **Roles:** `admin`.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Código borrado (sin cuerpo).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/DiscountNotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT de `POST /api/v1/auth/login` (payload `{ id, role, restaurantId }`, caduca en 8 h).
+
+  parameters:
+    RestaurantId:
+      name: restaurantId
+      in: path
+      required: true
+      description: Id del restaurante.
+      schema:
+        type: string
+      example: rest-1
+    TableId:
+      name: id
+      in: path
+      required: true
+      description: Id de la mesa.
+      schema:
+        type: string
+      example: table-rest-1-1
+
+    OrderId:
+      name: id
+      in: path
+      required: true
+      description: Id del pedido.
+      schema:
+        type: string
+      example: 9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d
+    DiscountId:
+      name: id
+      in: path
+      required: true
+      description: Id del código de descuento.
+      schema:
+        type: string
+      example: 3f1c2b4a-1111-4a2b-9c3d-000000000002
+
+  schemas:
+    TableStatus:
+      type: string
+      description: Estado de la mesa.
+      enum: [libre, ocupada, reservada]
+      example: libre
+
+    Table:
+      type: object
+      description: Mesa de un restaurante.
+      required:
+        - id
+        - restaurantId
+        - number
+        - description
+        - capacity
+        - status
+        - reservedForClientId
+        - reservedForEmail
+        - occupiedByClientId
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          example: table-rest-1-1
+        restaurantId:
+          type: string
+          example: rest-1
+        number:
+          type: integer
+          minimum: 1
+          description: Número visible de la mesa, único dentro del restaurante.
+          example: 1
+        description:
+          type: [string, 'null']
+          example: Junto a la ventana
+        capacity:
+          type: integer
+          minimum: 1
+          description: Número máximo de comensales.
+          example: 4
+        status:
+          $ref: '#/components/schemas/TableStatus'
+        reservedForClientId:
+          type: [string, 'null']
+          description: Id del cliente dueño de la reserva. Solo con `status = reservada`; si no, `null`.
+          example: null
+        reservedForEmail:
+          type: [string, 'null']
+          format: email
+          description: Email del cliente dueño de la reserva (para mostrarlo). `null` si no hay dueño.
+          example: null
+        occupiedByClientId:
+          type: [string, 'null']
+          description: |
+            Id del cliente que ocupó la mesa con `occupy`. Solo con `status = ocupada`; `null` si la
+            sentó un empleado con `PATCH /{id}/status` o si no está ocupada.
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-11-12T10:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-11-12T10:00:00.000Z'
+
+    AvailableTable:
+      description: |
+        Mesa devuelta por `GET /available`, con los flags `reservedForMe` y `occupiedByMe` (como
+        mucho uno de los dos es `true`; ambos `false` si está `libre`).
+      allOf:
+        - $ref: '#/components/schemas/Table'
+        - type: object
+          required: [reservedForMe, occupiedByMe]
+          properties:
+            reservedForMe:
+              type: boolean
+              description: '`true` si la mesa está `reservada` para el usuario autenticado.'
+              example: false
+            occupiedByMe:
+              type: boolean
+              description: '`true` si la mesa está `ocupada` por el usuario autenticado (la ocupó con `occupy`).'
+              example: false
+
+    CreateTableRequest:
+      type: object
+      description: Datos para crear una mesa. No acepta `status`; el estado inicial es siempre `libre`.
+      required: [number, capacity]
+      properties:
+        number:
+          type: integer
+          minimum: 1
+          example: 7
+        description:
+          type: [string, 'null']
+          description: Opcional. Se aplica `trim()`; vacía u omitida equivale a `null`.
+          example: Terraza
+        capacity:
+          type: integer
+          minimum: 1
+          example: 4
+
+    UpdateTableRequest:
+      type: object
+      description: Datos editables de una mesa. No acepta `status`.
+      required: [number, capacity]
+      properties:
+        number:
+          type: integer
+          minimum: 1
+          example: 1
+        description:
+          type: [string, 'null']
+          description: Opcional. Se aplica `trim()`; vacía u omitida equivale a `null`.
+          example: Junto a la ventana
+        capacity:
+          type: integer
+          minimum: 1
+          example: 2
+
+    OccupyTableRequest:
+      type: object
+      required: [people]
+      properties:
+        people:
+          type: integer
+          minimum: 1
+          description: Número de comensales; debe ser ≤ `capacity` de la mesa.
+          example: 2
+
+    UpdateTableStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/TableStatus'
+        reservedForEmail:
+          type: [string, 'null']
+          format: email
+          description: |
+            Solo con `status = reservada`. Email de un usuario con rol `cliente`. Omitido o `null`:
+            reserva sin dueño, que nadie puede ocupar con `occupy`.
+          example: cliente1@resttek.com
+
+    OrderItemStatus:
+      type: string
+      description: Estado de un ítem de pedido.
+      enum: [pendiente, preparando, listo, entregado]
+      example: pendiente
+
+    OrderItem:
+      type: object
+      required: [id, dishId, quantity, notes, status]
+      properties:
+        id:
+          type: string
+          example: 1c2d3e4f-0000-4000-8000-000000000001
+        dishId:
+          type: string
+          example: dish-1
+        quantity:
+          type: integer
+          description: Siempre 1 (los ítems se desglosan al crear el pedido).
+          example: 1
+        notes:
+          type: [string, 'null']
+          example: Sin cebolla
+        status:
+          $ref: '#/components/schemas/OrderItemStatus'
+        dishName:
+          type: string
+          description: Solo en las lecturas (no en la respuesta de creación).
+          example: Ensalada César
+        dishPrice:
+          type: number
+          description: Solo en las lecturas.
+          example: 8.5
+        dishCategory:
+          type: string
+          description: Solo en las lecturas.
+          example: entrante
+
+    Order:
+      type: object
+      required: [id, restaurantId, tableId, clientId, createdAt, discountCode, discountPercentage, items]
+      properties:
+        id:
+          type: string
+          example: 9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d
+        restaurantId:
+          type: string
+          example: rest-1
+        tableId:
+          type: [string, 'null']
+          description: Id de la mesa del pedido (`null` en pedidos sin mesa).
+          example: table-rest-1-1
+        clientId:
+          type: [string, 'null']
+          example: 7b0d3c1e-2f4a-4b8e-9c3d-1a2b3c4d5e6f
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-11-12T13:10:00.000Z'
+        discountCode:
+          type: [string, 'null']
+          description: Copia del código de descuento aplicado (`null` si no tiene).
+          example: DISCOUNT30
+        discountPercentage:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 100
+          description: Copia del porcentaje aplicado (`null` si no tiene descuento).
+          example: 30
+        subtotal:
+          type: number
+          minimum: 0
+          description: |
+            Solo en las lecturas. Suma de `dishPrice × quantity` de los ítems. Con descuento, es el
+            valor fijado al aplicar el código; sin descuento, se calcula con los precios actuales.
+          example: 10
+        discountAmount:
+          type: number
+          minimum: 0
+          description: |
+            Solo en las lecturas. `subtotal × discountPercentage / 100`, redondeado a 2 decimales
+            (0 sin descuento). Fijado al aplicar el código.
+          example: 3
+        total:
+          type: number
+          minimum: 0
+          description: |
+            Solo en las lecturas. `subtotal − discountAmount`. Con descuento, es el total fijado al
+            aplicar el código y no cambia aunque cambien los precios de los platos.
+          example: 7
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    CreateOrderItemRequest:
+      type: object
+      required: [dishId, quantity]
+      properties:
+        dishId:
+          type: string
+          example: dish-1
+        quantity:
+          type: integer
+          minimum: 1
+          description: Unidades del plato; se desglosan en ítems individuales.
+          example: 2
+        notes:
+          type: [string, 'null']
+          example: Sin cebolla
+
+    CreateOrderRequest:
+      type: object
+      required: [restaurantId, items]
+      properties:
+        restaurantId:
+          type: string
+          example: rest-1
+        tableId:
+          type: [string, 'null']
+          description: Id de la mesa ocupada por el cliente. Opcional y nullable; no se valida.
+          example: table-rest-1-1
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateOrderItemRequest'
+
+    Discount:
+      type: object
+      description: Código de descuento (porcentaje) aplicable a los pedidos.
+      required: [id, code, percentage, active, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          example: 3f1c2b4a-1111-4a2b-9c3d-000000000002
+        code:
+          type: string
+          description: Código normalizado (mayúsculas), único.
+          pattern: '^[A-Z0-9_-]{3,30}$'
+          minLength: 3
+          maxLength: 30
+          example: DISCOUNT30
+        percentage:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Porcentaje a descontar del subtotal del pedido.
+          example: 30
+        active:
+          type: boolean
+          description: Si es `false`, el código no se puede aplicar a pedidos.
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-11-12T10:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-11-12T10:00:00.000Z'
+
+    CreateDiscountRequest:
+      type: object
+      required: [code, percentage]
+      properties:
+        code:
+          type: string
+          description: |
+            Código elegido por el admin. Se aplica `trim()` + mayúsculas y, después, debe cumplir
+            `^[A-Z0-9_-]{3,30}$` (letras sin acentos, dígitos, `_` y `-`).
+          minLength: 3
+          maxLength: 30
+          example: black_friday
+        percentage:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 50
+        active:
+          type: boolean
+          default: true
+          example: true
+
+    UpdateDiscountRequest:
+      type: object
+      description: Modificación parcial. El `code` no se puede cambiar.
+      properties:
+        percentage:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 25
+        active:
+          type: boolean
+          example: false
+
+    ApplyDiscountRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: Código a aplicar; se normaliza con `trim()` + mayúsculas.
+          minLength: 3
+          maxLength: 30
+          example: DISCOUNT30
+
+    DomainError:
+      type: object
+      description: Error de dominio devuelto por el `errorHandler`.
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: |
+            Nombre de la clase del error; es el campo por el que deben distinguir los frontends.
+            Errores de mesas: `TableNotFoundError` (404), `RestaurantNotFoundError` (404),
+            `InvalidTableNumberError`, `InvalidTableCapacityError`, `InvalidTableStatusError`,
+            `InvalidPeopleCountError`, `InvalidReservationClientError` (400),
+            `DuplicatedTableNumberError`, `TableOccupiedError`, `TableNotAvailableError` (409).
+            Errores de descuentos: `DiscountNotFoundError`, `OrderNotFoundError` (404),
+            `InvalidDiscountCodeError`, `InvalidDiscountPercentageError`,
+            `InvalidDiscountActiveError` (400), `OrderAccessDeniedError` (403),
+            `DuplicatedDiscountCodeError`, `DiscountInactiveError`,
+            `OrderDiscountAlreadyAppliedError` (409).
+          example: TableNotFoundError
+        message:
+          type: string
+          description: Detalle legible (en inglés, salvo el de estado inválido); no usar para lógica.
+          example: Table not found
+
+    SimpleError:
+      type: object
+      description: Error de los middlewares de auth y del controlador de pedidos.
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: 'Unauthorized: No token provided'
+
+  responses:
+    Unauthorized:
+      description: Falta el token, está mal formado, es inválido o ha caducado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SimpleError'
+          example:
+            error: 'Unauthorized: No token provided'
+    Forbidden:
+      description: |
+        El rol no tiene permiso para la operación, o el empleado (`manager`, `camarero`, `cocinero`)
+        pertenece a otro restaurante.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SimpleError'
+          examples:
+            rol:
+              summary: Rol sin permiso
+              value:
+                error: 'Forbidden: Insufficient permissions'
+            restaurante:
+              summary: Empleado de otro restaurante
+              value:
+                error: 'Forbidden: Restaurant access denied'
+    RestaurantNotFound:
+      description: El restaurante no existe.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainError'
+          example:
+            error: RestaurantNotFoundError
+            message: Restaurant not found
+    TableNotFound:
+      description: La mesa no existe o pertenece a otro restaurante.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainError'
+          example:
+            error: TableNotFoundError
+            message: Table not found
+    InvalidTableData:
+      description: Número o capacidad no son enteros ≥ 1.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainError'
+          examples:
+            numero:
+              summary: Número inválido
+              value:
+                error: InvalidTableNumberError
+                message: Table number must be an integer greater than or equal to 1
+            capacidad:
+              summary: Capacidad inválida
+              value:
+                error: InvalidTableCapacityError
+                message: Table capacity must be an integer greater than or equal to 1
+    InvalidPeopleCount:
+      description: '`people` ausente, no entero o menor que 1.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainError'
+          example:
+            error: InvalidPeopleCountError
+            message: People count must be an integer greater than or equal to 1
+    DuplicatedTableNumber:
+      description: Ya existe otra mesa con ese número en el restaurante.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainError'
+          example:
+            error: DuplicatedTableNumberError
+            message: Table number already exists in this restaurant
+    DiscountNotFound:
+      description: El código de descuento no existe.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainError'
+          example:
+            error: DiscountNotFoundError
+            message: Discount not found
+    OrderNotFound:
+      description: El pedido no existe.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainError'
+          example:
+            error: OrderNotFoundError
+            message: Order not found
+    OrderAccessDenied:
+      description: Un `cliente` intenta modificar el descuento de un pedido que no es suyo.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainError'
+          example:
+            error: OrderAccessDeniedError
+            message: Order belongs to another client
+    InvalidDiscountCode:
+      description: Código ausente o con formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainError'
+          example:
+            error: InvalidDiscountCodeError
+            message: 'Discount code must match ^[A-Z0-9_-]{3,30}$'
+    InvalidDiscountData:
+      description: Código, porcentaje o `active` inválidos.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainError'
+          examples:
+            codigo:
+              summary: Código inválido
+              value:
+                error: InvalidDiscountCodeError
+                message: 'Discount code must match ^[A-Z0-9_-]{3,30}$'
+            porcentaje:
+              summary: Porcentaje fuera de rango
+              value:
+                error: InvalidDiscountPercentageError
+                message: Discount percentage must be an integer between 1 and 100
+            activo:
+              summary: active no booleano
+              value:
+                error: InvalidDiscountActiveError
+                message: Active must be a boolean
