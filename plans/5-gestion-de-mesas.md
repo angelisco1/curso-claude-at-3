@@ -103,7 +103,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 
 ### web-admin
 
-- [ ] 19. Crear `features/tables/models/table.model.ts` y `services/table.service.ts` (URL `restaurants/:restaurantId/tables`, igual que `IngredientService`).
+- [x] 19. Crear `features/tables/models/table.model.ts` y `services/table.service.ts` (URL `restaurants/:restaurantId/tables`, igual que `IngredientService`).
 - [ ] 20. Crear `store/table.store.ts` (signals privadas en solo lectura, `loadByRestaurant`, `create`, `update`, `delete`, protección frente a respuestas de otro restaurante como en `IngredientStore`).
 - [ ] 21. Crear `pages/table-list` (tabla con número, descripción, capacidad y estado en badge; botones editar/borrar con confirmación; mensaje de error si la API responde 409 al borrar una ocupada).
 - [ ] 22. Crear `pages/table-form` (formulario reactivo: número y capacidad requeridos ≥ 1, descripción opcional, estado con selector; modo alta/edición según `:id`; mostrar el error de número duplicado).
