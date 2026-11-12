@@ -7,7 +7,9 @@ import {
     InvalidTableCapacityError,
     TableNotFoundError,
     TableOccupiedError,
-    InvalidPeopleCountError
+    InvalidPeopleCountError,
+    TableNotAvailableError,
+    InvalidReservedForError
 } from '@errors/DomainErrors.js'
 
 export interface CreateTableDTO {
@@ -71,6 +73,26 @@ export class TableService {
         return this.tableRepository.findAvailable(restaurantId, people, userId)
     }
 
+    async occupy(restaurantId: string, id: string, people: number, userId: string): Promise<Table> {
+        this.validatePeople(people)
+        await this.findById(restaurantId, id)
+
+        const occupied = await this.tableRepository.occupyIfAvailable(id, restaurantId, people, userId, new Date().toISOString())
+        if (!occupied) {
+            throw new TableNotAvailableError()
+        }
+        return this.findById(restaurantId, id)
+    }
+
+    async updateStatus(restaurantId: string, id: string, status: string, reservedFor?: string | null): Promise<Table> {
+        const normalizedStatus = normalizeTableStatus(status)
+        const normalizedReservedFor = normalizeReservedFor(normalizedStatus, reservedFor)
+        await this.findById(restaurantId, id)
+
+        await this.tableRepository.updateStatus(id, normalizedStatus, normalizedReservedFor, new Date().toISOString())
+        return this.findById(restaurantId, id)
+    }
+
     async findById(restaurantId: string, id: string): Promise<Table> {
         const table = await this.tableRepository.findById(id)
         if (!table || table.restaurantId !== restaurantId) {
@@ -108,4 +130,15 @@ function normalizeDescription(value: unknown): string | null {
     if (typeof value !== 'string') return null
     const trimmed = value.trim()
     return trimmed === '' ? null : trimmed
+}
+
+function normalizeReservedFor(status: TableStatusType, value: unknown): string | null {
+    if (value === undefined || value === null) return null
+    if (status !== 'reservada') {
+        throw new InvalidReservedForError()
+    }
+    if (typeof value !== 'string' || value.trim() === '') {
+        throw new InvalidReservedForError('reservedFor must be a non-empty user id')
+    }
+    return value.trim()
 }

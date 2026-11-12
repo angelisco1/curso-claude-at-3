@@ -94,7 +94,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 - [x] 10. Implementar `TableService.create`, `update`, `findByRestaurant` y `findById` (lanza `TableNotFoundError` si no existe o es de otro restaurante) hasta verde.
 - [x] 11. Tests (rojo) + implementación de `TableService.delete`: borra la mesa; si está `ocupada` lanza `TableOccupiedError`.
 - [x] 12. Tests (rojo) + implementación de `findAvailable(restaurantId, people)`: `people` entero ≥ 1 o `InvalidPeopleCountError`.
-- [ ] 13. Tests (rojo) + implementación de `occupy(restaurantId, tableId, people)` (lanza `TableNotAvailableError` si `occupyIfAvailable` devuelve `false`) y `updateStatus(restaurantId, tableId, status)` usando `normalizeTableStatus()`.
+- [x] 13. Tests (rojo) + implementación de `occupy(restaurantId, tableId, people)` (lanza `TableNotAvailableError` si `occupyIfAvailable` devuelve `false`) y `updateStatus(restaurantId, tableId, status)` usando `normalizeTableStatus()`.
 - [ ] 14. Crear `TableController` (arrow functions, `next(error)`, `toJSON()` en camelCase) con `create`, `getAll`, `getById`, `update`, `delete`, `getAvailable` (query `people`), `occupy` (body `people`) y `updateStatus` (body `status`).
 - [ ] 15. Crear `table.routes.ts` (`Router({ mergeParams: true })`): `GET /available` y `POST /:id/occupy` → todos los roles autenticados; `GET /` y `GET /:id` → admin, manager, camarero, cocinero; `PATCH /:id/status` → admin, manager, camarero (sin cocinero, ver "Dudas resueltas"); `POST /`, `PUT /:id`, `DELETE /:id` → admin. Declarar `/available` antes de `/:id`.
 - [ ] 16. Montar las rutas en `app.ts` y comprobar a mano con `npm run dev:api` + `curl` (crear, listar disponibles, ocupar dos veces → 409).

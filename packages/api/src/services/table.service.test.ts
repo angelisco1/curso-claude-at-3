@@ -8,7 +8,9 @@ import {
     DuplicatedTableNumberError,
     TableNotFoundError,
     TableOccupiedError,
-    InvalidPeopleCountError
+    InvalidPeopleCountError,
+    TableNotAvailableError,
+    InvalidReservedForError
 } from '@errors/DomainErrors.js'
 
 describe('TableService', () => {
@@ -214,6 +216,114 @@ describe('TableService', () => {
 
         it.each([0, -1, 1.5, NaN, '3', undefined, null])('lanza InvalidPeopleCountError con people = %j', async (people) => {
             await expect(service.findAvailable('r1', people as number, 'c1')).rejects.toThrow(InvalidPeopleCountError)
+        })
+    })
+
+    describe('occupy', () => {
+        it('ocupa una mesa libre y devuelve la mesa actualizada', async () => {
+            const created = await service.create('r1', validInput)
+
+            const occupied = await service.occupy('r1', created.id, 3, 'c1')
+            expect(occupied).toMatchObject({ id: created.id, status: 'ocupada', reservedFor: null })
+            expect(await repo.findById(created.id)).toEqual(occupied)
+        })
+
+        it('ocupa una mesa reservada para el propio usuario', async () => {
+            const created = await service.create('r1', validInput)
+            await service.updateStatus('r1', created.id, 'reservada', 'c1')
+
+            await expect(service.occupy('r1', created.id, 2, 'c1')).resolves.toMatchObject({ status: 'ocupada', reservedFor: null })
+        })
+
+        it('lanza TableNotAvailableError si ya está ocupada', async () => {
+            const created = await service.create('r1', validInput)
+            await service.occupy('r1', created.id, 2, 'c1')
+            await expect(service.occupy('r1', created.id, 2, 'c2')).rejects.toThrow(TableNotAvailableError)
+        })
+
+        it('lanza TableNotAvailableError si está reservada para otro o sin titular', async () => {
+            const forOther = await service.create('r1', validInput)
+            await service.updateStatus('r1', forOther.id, 'reservada', 'c2')
+            const anonymous = await service.create('r1', { ...validInput, number: 2 })
+            await service.updateStatus('r1', anonymous.id, 'reservada')
+
+            await expect(service.occupy('r1', forOther.id, 2, 'c1')).rejects.toThrow(TableNotAvailableError)
+            await expect(service.occupy('r1', anonymous.id, 2, 'c1')).rejects.toThrow(TableNotAvailableError)
+        })
+
+        it('lanza TableNotAvailableError si la capacidad es insuficiente', async () => {
+            const created = await service.create('r1', validInput)
+            await expect(service.occupy('r1', created.id, 5, 'c1')).rejects.toThrow(TableNotAvailableError)
+            expect((await repo.findById(created.id))?.status).toBe('libre')
+        })
+
+        it('lanza TableNotFoundError si no existe o es de otro restaurante', async () => {
+            const created = await service.create('r1', validInput)
+            await expect(service.occupy('r1', 'no-existe', 2, 'c1')).rejects.toThrow(TableNotFoundError)
+            await expect(service.occupy('r2', created.id, 2, 'c1')).rejects.toThrow(TableNotFoundError)
+        })
+
+        it.each([0, 1.5, '2', undefined])('lanza InvalidPeopleCountError con people = %j', async (people) => {
+            const created = await service.create('r1', validInput)
+            await expect(service.occupy('r1', created.id, people as number, 'c1')).rejects.toThrow(InvalidPeopleCountError)
+        })
+    })
+
+    describe('updateStatus', () => {
+        it('cambia el estado normalizándolo', async () => {
+            const created = await service.create('r1', validInput)
+
+            const updated = await service.updateStatus('r1', created.id, ' OCUPADA ')
+            expect(updated).toMatchObject({ status: 'ocupada', reservedFor: null })
+            expect(await repo.findById(created.id)).toEqual(updated)
+        })
+
+        it('permite cualquier transición, incluida ocupada -> libre y al mismo estado', async () => {
+            const created = await service.create('r1', { ...validInput, status: 'ocupada' })
+            await expect(service.updateStatus('r1', created.id, 'libre')).resolves.toMatchObject({ status: 'libre' })
+            await expect(service.updateStatus('r1', created.id, 'libre')).resolves.toMatchObject({ status: 'libre' })
+        })
+
+        it('reserva para un cliente con reservedFor', async () => {
+            const created = await service.create('r1', validInput)
+            await expect(service.updateStatus('r1', created.id, 'reservada', 'c1'))
+                .resolves.toMatchObject({ status: 'reservada', reservedFor: 'c1' })
+        })
+
+        it.each([undefined, null])('crea una reserva anónima si reservedFor es %j', async (reservedFor) => {
+            const created = await service.create('r1', validInput)
+            await service.updateStatus('r1', created.id, 'reservada', 'c1')
+
+            await expect(service.updateStatus('r1', created.id, 'reservada', reservedFor))
+                .resolves.toMatchObject({ status: 'reservada', reservedFor: null })
+        })
+
+        it('limpia reservedFor al pasar a otro estado', async () => {
+            const created = await service.create('r1', validInput)
+            await service.updateStatus('r1', created.id, 'reservada', 'c1')
+
+            await expect(service.updateStatus('r1', created.id, 'libre')).resolves.toMatchObject({ status: 'libre', reservedFor: null })
+        })
+
+        it('lanza InvalidReservedForError si se envía reservedFor con otro estado', async () => {
+            const created = await service.create('r1', validInput)
+            await expect(service.updateStatus('r1', created.id, 'libre', 'c1')).rejects.toThrow(InvalidReservedForError)
+        })
+
+        it.each(['', '   ', 5])('lanza InvalidReservedForError si reservedFor no es un id válido (%j)', async (reservedFor) => {
+            const created = await service.create('r1', validInput)
+            await expect(service.updateStatus('r1', created.id, 'reservada', reservedFor as string)).rejects.toThrow(InvalidReservedForError)
+        })
+
+        it('lanza InvalidTableStatusError con un estado inválido', async () => {
+            const created = await service.create('r1', validInput)
+            await expect(service.updateStatus('r1', created.id, 'cerrada')).rejects.toThrow(InvalidTableStatusError)
+        })
+
+        it('lanza TableNotFoundError si no existe o es de otro restaurante', async () => {
+            const created = await service.create('r1', validInput)
+            await expect(service.updateStatus('r1', 'no-existe', 'libre')).rejects.toThrow(TableNotFoundError)
+            await expect(service.updateStatus('r2', created.id, 'libre')).rejects.toThrow(TableNotFoundError)
         })
     })
 })
