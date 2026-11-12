@@ -1,5 +1,5 @@
 import { Database } from '@config/database.js'
-import type { Table } from '@models/table.model.js'
+import type { Table, TableStatusType } from '@models/table.model.js'
 import { normalizeTableStatus } from '@models/table.model.js'
 
 interface TableRow {
@@ -21,6 +21,9 @@ export interface TableRepository {
     findByRestaurant(restaurantId: string): Promise<Table[]>
     save(table: Table): Promise<void>
     delete(id: string): Promise<void>
+    findAvailable(restaurantId: string, people: number, userId: string): Promise<Table[]>
+    updateStatus(id: string, status: TableStatusType, reservedFor: string | null, updatedAt: string): Promise<void>
+    occupyIfAvailable(id: string, restaurantId: string, people: number, userId: string, updatedAt: string): Promise<boolean>
 }
 
 export class SqliteTableRepository implements TableRepository {
@@ -57,6 +60,34 @@ export class SqliteTableRepository implements TableRepository {
 
     async delete(id: string): Promise<void> {
         await this.db.run('DELETE FROM tables WHERE id = ?', [id])
+    }
+
+    async findAvailable(restaurantId: string, people: number, userId: string): Promise<Table[]> {
+        const rows = await this.db.all<TableRow>(
+            `SELECT ${SELECT_COLUMNS} FROM tables
+             WHERE restaurant_id = ? AND capacity >= ?
+               AND (status = 'libre' OR (status = 'reservada' AND reserved_for = ?))
+             ORDER BY capacity, number`,
+            [restaurantId, people, userId]
+        )
+        return rows.map(row => this.mapToTable(row))
+    }
+
+    async updateStatus(id: string, status: TableStatusType, reservedFor: string | null, updatedAt: string): Promise<void> {
+        await this.db.run(
+            'UPDATE tables SET status = ?, reserved_for = ?, updated_at = ? WHERE id = ?',
+            [status, reservedFor, updatedAt, id]
+        )
+    }
+
+    async occupyIfAvailable(id: string, restaurantId: string, people: number, userId: string, updatedAt: string): Promise<boolean> {
+        const result = await this.db.run(
+            `UPDATE tables SET status = 'ocupada', reserved_for = NULL, updated_at = ?
+             WHERE id = ? AND restaurant_id = ? AND capacity >= ?
+               AND (status = 'libre' OR (status = 'reservada' AND reserved_for = ?))`,
+            [updatedAt, id, restaurantId, people, userId]
+        )
+        return result.changes === 1
     }
 
     private mapToTable(row: TableRow): Table {

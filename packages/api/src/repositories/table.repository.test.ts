@@ -81,4 +81,68 @@ describe('SqliteTableRepository (Integration)', () => {
             expect(await repo.findById('t1')).toBeNull()
         })
     })
+
+    describe('findAvailable', () => {
+        beforeEach(async () => {
+            await repo.save(buildTable({ id: 'libre-2', number: 1, capacity: 2 }))
+            await repo.save(buildTable({ id: 'libre-6', number: 2, capacity: 6 }))
+            await repo.save(buildTable({ id: 'libre-4', number: 3, capacity: 4 }))
+            await repo.save(buildTable({ id: 'ocupada-4', number: 4, capacity: 4, status: 'ocupada' }))
+            await repo.save(buildTable({ id: 'res-mia', number: 5, capacity: 4, status: 'reservada', reservedFor: 'c1' }))
+            await repo.save(buildTable({ id: 'res-otro', number: 6, capacity: 4, status: 'reservada', reservedFor: 'c2' }))
+            await repo.save(buildTable({ id: 'res-anonima', number: 7, capacity: 4, status: 'reservada', reservedFor: null }))
+            await repo.save(buildTable({ id: 'otro-rest', number: 1, capacity: 8, restaurantId: 'r2' }))
+        })
+
+        it('devuelve libres y reservadas para el usuario con capacidad suficiente, ordenadas por capacidad y número', async () => {
+            const tables = await repo.findAvailable('r1', 3, 'c1')
+            expect(tables.map(t => t.id)).toEqual(['libre-4', 'res-mia', 'libre-6'])
+        })
+
+        it('no incluye reservas de otros ni anónimas', async () => {
+            const tables = await repo.findAvailable('r1', 1, 'c2')
+            expect(tables.map(t => t.id)).toEqual(['libre-2', 'libre-4', 'res-otro', 'libre-6'])
+        })
+
+        it('devuelve un array vacío si ninguna mesa tiene capacidad suficiente', async () => {
+            expect(await repo.findAvailable('r1', 7, 'c1')).toEqual([])
+        })
+    })
+
+    describe('updateStatus', () => {
+        it('cambia estado, reservedFor y updatedAt', async () => {
+            await repo.save(buildTable())
+            await repo.updateStatus('t1', 'reservada', 'c1', 'later')
+
+            expect(await repo.findById('t1')).toMatchObject({ status: 'reservada', reservedFor: 'c1', updatedAt: 'later' })
+        })
+    })
+
+    describe('occupyIfAvailable', () => {
+        it('ocupa una mesa libre con capacidad suficiente', async () => {
+            await repo.save(buildTable())
+
+            expect(await repo.occupyIfAvailable('t1', 'r1', 4, 'c1', 'later')).toBe(true)
+            expect(await repo.findById('t1')).toMatchObject({ status: 'ocupada', reservedFor: null, updatedAt: 'later' })
+        })
+
+        it('ocupa una mesa reservada para el propio usuario y limpia la reserva', async () => {
+            await repo.save(buildTable({ status: 'reservada', reservedFor: 'c1' }))
+
+            expect(await repo.occupyIfAvailable('t1', 'r1', 2, 'c1', 'later')).toBe(true)
+            expect(await repo.findById('t1')).toMatchObject({ status: 'ocupada', reservedFor: null })
+        })
+
+        it.each([
+            ['reservada para otro', { status: 'reservada' as const, reservedFor: 'c2' }, 2, 'r1'],
+            ['reservada anónima', { status: 'reservada' as const, reservedFor: null }, 2, 'r1'],
+            ['con capacidad insuficiente', {}, 5, 'r1'],
+            ['de otro restaurante', {}, 2, 'r2']
+        ])('no ocupa una mesa %s', async (_label, overrides, people, restaurantId) => {
+            await repo.save(buildTable(overrides))
+
+            expect(await repo.occupyIfAvailable('t1', restaurantId, people, 'c1', 'later')).toBe(false)
+            expect(await repo.findById('t1')).toMatchObject({ status: overrides.status ?? 'libre', updatedAt: now })
+        })
+    })
 })

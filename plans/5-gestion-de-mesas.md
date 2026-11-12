@@ -87,7 +87,7 @@ Cada tarea debe poder hacerse en 5-10 minutos.
 - [x] 3. Test (rojo) de `normalizeTableStatus()`: acepta `libre`/`ocupada`/`reservada` con mayúsculas y espacios, y lanza `InvalidTableStatusError` con otro valor.
 - [x] 4. Crear `table.model.ts` (interface `Table` + `normalizeTableStatus()`) hasta poner el test en verde.
 - [x] 5. Crear `table.repository.ts` con la interface `TableRepository` y `SqliteTableRepository`: `findById`, `findByRestaurant` (ordenado por `number`), `save` (insert/update como `SqliteRestaurantRepository`) y `delete`.
-- [ ] 6. Añadir al repositorio `findAvailable(restaurantId, people)` (`status = 'libre' AND capacity >= ?`, ordenado por `capacity, number`), `updateStatus(id, status)` y `occupyIfAvailable(id, restaurantId, people)` con un único `UPDATE ... WHERE id = ? AND restaurant_id = ? AND status = 'libre' AND capacity >= ?` que devuelva si `changes === 1`.
+- [x] 6. Añadir al repositorio `findAvailable(restaurantId, people)` (`status = 'libre' AND capacity >= ?`, ordenado por `capacity, number`), `updateStatus(id, status)` y `occupyIfAvailable(id, restaurantId, people)` con un único `UPDATE ... WHERE id = ? AND restaurant_id = ? AND status = 'libre' AND capacity >= ?` que devuelva si `changes === 1`.
 - [ ] 7. Test de integración `table.repository.test.ts` (SQLite `:memory:`): guardar/buscar, filtro de disponibles, ocupación correcta y segunda ocupación que devuelve `false`, y número duplicado en el mismo restaurante rechazado.
 - [ ] 8. Crear `MockTableRepository` en `repositories/mocks/`.
 - [ ] 9. Tests (rojo) de `TableService.create`/`update`: número entero ≥ 1, capacidad entera ≥ 1, descripción con trim (o `null`), estado por defecto `libre`, número duplicado → `DuplicatedTableNumberError`.
