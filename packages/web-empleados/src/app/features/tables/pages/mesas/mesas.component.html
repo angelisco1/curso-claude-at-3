@@ -1,0 +1,47 @@
+<div class="page-header">
+  <h1>Mesas</h1>
+</div>
+
+@if (tableStore.loading() && tableStore.tables().length === 0) {
+  <div class="spinner"></div>
+}
+
+@if (tableStore.error()) {
+  <div class="alert-error">{{ tableStore.error() }}</div>
+}
+
+@if (!tableStore.loading() || tableStore.tables().length > 0) {
+  @if (tableStore.tables().length === 0) {
+    <div class="empty-state">
+      <p>Este restaurante no tiene mesas</p>
+    </div>
+  } @else {
+    <div class="tables-grid">
+      @for (table of tableStore.tables(); track table.id) {
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-number">Mesa {{ table.number }}</span>
+            <span [class]="getStatusClass(table.status)">{{ table.status }}</span>
+          </div>
+          <div class="table-body">
+            <span class="table-capacity">Capacidad: {{ table.capacity }}</span>
+            @if (table.description) {
+              <span class="table-description">{{ table.description }}</span>
+            }
+          </div>
+          @if (canChangeStatus()) {
+            <div class="table-actions">
+              <label class="sr-only" [for]="'status-' + table.id">Cambiar estado de la mesa {{ table.number }}</label>
+              <select class="status-select" [id]="'status-' + table.id" (change)="changeStatus(table, $event)">
+                <option value="" selected disabled>Cambiar estado...</option>
+                @for (status of otherStatuses(table); track status) {
+                  <option [value]="status">{{ status }}</option>
+                }
+              </select>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+}
